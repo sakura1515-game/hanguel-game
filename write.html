@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>칠판에 글자 쓰기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
+    <script src="words.js?v=9.0"></script>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body {
+            margin: 0; padding: 8px; background-color: #fef8ee;
+            font-family: 'Gaegu', cursive, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 100vh; min-height: 100dvh;
+            touch-action: none; overflow: hidden;
+        }
+        .header-bar {
+            width: min(94vw, 560px); display: flex;
+            align-items: center; justify-content: space-between; margin-bottom: 6px;
+        }
+        .btn-home {
+            background: #ffffff; border: 2px solid #cbd5e1; border-bottom: 3px solid #94a3b8;
+            font-family: 'Gaegu', cursive; font-size: 16px; font-weight: bold;
+            color: #475569; padding: 4px 12px; border-radius: 14px; text-decoration: none;
+        }
+        .btn-home:active { transform: translateY(2px); border-bottom-width: 1px; }
+        .category-scroll {
+            width: min(94vw, 560px); overflow-x: auto; white-space: nowrap;
+            display: flex; gap: 6px; padding-bottom: 6px; scrollbar-width: none;
+        }
+        .category-scroll::-webkit-scrollbar { display: none; }
+        .category-btn {
+            background: #fff; border: 2px solid #ffd166; border-bottom: 3px solid #e0ab34;
+            color: #634200; font-family: 'Gaegu'; font-size: 15px; font-weight: bold;
+            padding: 4px 12px; border-radius: 16px; cursor: pointer; flex-shrink: 0;
+        }
+        .category-btn.active {
+            background: #ff7675; color: #fff; border-color: #d63031; border-bottom: 3px solid #c0392b;
+        }
+        .status-bar {
+            width: min(94vw, 560px); display: flex; align-items: center;
+            justify-content: space-between; margin-bottom: 6px;
+        }
+        .stamp-board {
+            display: flex; align-items: center; gap: 4px; background: #fff;
+            padding: 3px 10px; border-radius: 20px; border: 2px solid #ffd166;
+        }
+        .stamp-title { font-size: 15px; font-weight: bold; color: #d97706; }
+        .stamp-star { font-size: 16px; color: #e5e7eb; transition: transform 0.2s; }
+        .stamp-star.earned { color: #fbbf24; transform: scale(1.2); }
+        .crown-badge { font-size: 15px; font-weight: bold; color: #d97706; margin-left: 2px; }
+        .tools-row { display: flex; align-items: center; gap: 8px; }
+        .palette {
+            display: flex; gap: 6px; background: #fff; padding: 4px 8px;
+            border-radius: 30px; border: 2px solid #f0e6d6;
+        }
+        .color-dot {
+            width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-dot.active { transform: scale(1.15); border-color: #333; }
+        .btn-speaker {
+            background: #fff; border: 2px solid #ffd166; width: 34px; height: 34px;
+            border-radius: 50%; font-size: 16px; display: flex; align-items: center;
+            justify-content: center; cursor: pointer;
+        }
+        .board-frame {
+            position: relative; padding: 6px; border-radius: 22px;
+            background: linear-gradient(135deg, #ff7675, #fab1a0, #ffeaa7, #55efc4, #81ecec, #74b9ff, #a29bfe);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08); width: min(94vw, 560px);
+        }
+        .board-frame.praise-glow { box-shadow: 0 0 24px rgba(255, 159, 243, 0.9); }
+        #game-board {
+            width: 100%; height: min(48vw, 250px); background: #fff;
+            border-radius: 16px; position: relative; overflow: hidden; display: flex;
+        }
+        .char-box {
+            flex: 1; height: 100%; position: relative; display: flex;
+            align-items: center; justify-content: center; border-right: 1.5px dashed #e2e8f0;
+        }
+        .char-box:last-child { border-right: none; }
+        .char-box::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; border-top: 1.5px dashed #e2e8f0; }
+        .char-box::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px dashed #e2e8f0; }
+        .guide-char {
+            font-family: 'Nanum Gothic'; font-weight: 800; color: #dcdde1; pointer-events: none; z-index: 1;
+        }
+        #draw-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; }
+        .praise-toast {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%) translateY(-30px);
+            background: rgba(255, 107, 129, 0.95); color: #fff; padding: 4px 16px;
+            border-radius: 20px; font-size: 18px; font-weight: bold; opacity: 0;
+            pointer-events: none; transition: all 0.3s ease; z-index: 10;
+        }
+        .praise-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .btn-group { margin-top: 10px; display: flex; gap: 8px; }
+        button.action-btn {
+            border: 2px solid #333; border-bottom: 4px solid #222; padding: 6px 16px;
+            font-family: 'Gaegu'; font-size: 18px; font-weight: bold; border-radius: 14px;
+            cursor: pointer;
+        }
+        button.action-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+        .btn-prev { background: #68d8d6; }
+        .btn-clear { background: #ffd166; }
+        .btn-done { background: #ff9ff3; }
+        .btn-next { background: #06d6a0; }
+        .btn-done.ready-bounce {
+            animation: bounce-ready 0.6s infinite alternate; background: #ff4757; color: #fff;
+        }
+        @keyframes bounce-ready { 100% { transform: scale(1.1); } }
+        #fx-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <a href="index.html" class="btn-home">🏠 홈으로</a>
+        <span style="font-size: 15px; font-weight: bold; color: #57606f;" id="page-badge">1 / 1</span>
+    </div>
+
+    <div class="category-scroll" id="category-bar"></div>
+
+    <div class="status-bar">
+        <div class="stamp-board" id="stamp-board">
+            <span class="stamp-title">⭐ 도장</span>
+            <span class="stamp-star" id="star-0">★</span>
+            <span class="stamp-star" id="star-1">★</span>
+            <span class="stamp-star" id="star-2">★</span>
+            <span class="stamp-star" id="star-3">★</span>
+            <span class="stamp-star" id="star-4">★</span>
+            <span class="crown-badge" id="crown-badge"></span>
+        </div>
+        <div class="tools-row">
+            <div class="palette" id="palette">
+                <div class="color-dot" style="background:#ff4757;" data-color="#ff4757"></div>
+                <div class="color-dot" style="background:#ffa502;" data-color="#ffa502"></div>
+                <div class="color-dot" style="background:#2ed573;" data-color="#2ed573"></div>
+                <div class="color-dot active" style="background:#1e90ff;" data-color="#1e90ff"></div>
+                <div class="color-dot" style="background:#9b59b6;" data-color="#9b59b6"></div>
+            </div>
+            <div class="btn-speaker" onclick="speakCurrentWord()">🔊</div>
+        </div>
+    </div>
+
+    <div class="board-frame" id="board-frame">
+        <div class="praise-toast" id="praise-toast">🎉 참 잘했어요! 멋져요! 👏</div>
+        <div id="game-board"><canvas id="draw-canvas"></canvas></div>
+    </div>
+
+    <div class="btn-group">
+        <button class="action-btn btn-prev" onclick="prevWord()">◀ 이전</button>
+        <button class="action-btn btn-clear" onclick="clearCanvas()">🧼 지우기</button>
+        <button class="action-btn btn-done" id="btn-done" onclick="finishLetter()">✨ 완성!</button>
+        <button class="action-btn btn-next" onclick="nextWord()">다음 ▶</button>
+    </div>
+
+    <canvas id="fx-canvas"></canvas>
+
+    <script>
+        const categories = (typeof wordCategories !== 'undefined') ? wordCategories : { "가나다": ["가", "나", "다"] };
+        const categoryKeys = Object.keys(categories);
+        let currentCategoryKey = categoryKeys[0];
+        let currentWords = categories[currentCategoryKey];
+        let currentIndex = 0, starCount = 0, crownCount = 0;
+        let isDrawing = false, currentColor = '#1e90ff', baseLineWidth = 7;
+        let charGuideMaps = [], isPraiseGiven = false;
+
+        const board = document.getElementById('game-board');
+        const canvas = document.getElementById('draw-canvas');
+        const ctx = canvas.getContext('2d');
+        const fxCanvas = document.getElementById('fx-canvas');
+        const fxCtx = fxCanvas.getContext('2d');
+
+        function initCategoryBar() {
+            const bar = document.getElementById('category-bar');
+            bar.innerHTML = '';
+            categoryKeys.forEach(catName => {
+                const btn = document.createElement('button');
+                btn.className = `category-btn ${catName === currentCategoryKey ? 'active' : ''}`;
+                btn.textContent = catName;
+                btn.onclick = () => {
+                    currentCategoryKey = catName;
+                    currentWords = categories[catName];
+                    currentIndex = 0;
+                    document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.textContent === catName));
+                    renderWord(currentWords[currentIndex]);
+                };
+                bar.appendChild(btn);
+            });
+        }
+
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+
+        const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+        let noteIdx = 0, lastTone = 0;
+        function playChime() {
+            if (Date.now() - lastTone < 90) return;
+            lastTone = Date.now();
+            const actx = getAudioContext();
+            const osc = actx.createOscillator(), gain = actx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(chimeNotes[noteIdx++ % chimeNotes.length], actx.currentTime);
+            gain.gain.setValueAtTime(0.25, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.2);
+            osc.connect(gain); gain.connect(actx.destination);
+            osc.start(); osc.stop(actx.currentTime + 0.2);
+        }
+
+        function playTone(freq, type, duration, delay = 0, vol = 0.35) {
+            setTimeout(() => {
+                const actx = getAudioContext();
+                const osc = actx.createOscillator(), gain = actx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, actx.currentTime);
+                gain.gain.setValueAtTime(vol, actx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + duration);
+                osc.connect(gain); gain.connect(actx.destination);
+                osc.start(); osc.stop(actx.currentTime + duration);
+            }, delay);
+        }
+
+        function speakCurrentWord() {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(currentWords[currentIndex]);
+            utter.lang = 'ko-KR'; utter.rate = 0.85; utter.pitch = 1.25;
+            window.speechSynthesis.speak(utter);
+        }
+
+        let confetti = [];
+        function fireConfetti(n = 35) {
+            const cols = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6'];
+            for (let i = 0; i < n; i++) {
+                confetti.push({
+                    x: window.innerWidth / 2, y: window.innerHeight / 2,
+                    vx: (Math.random() - 0.5) * 16, vy: (Math.random() - 0.8) * 16,
+                    size: Math.random() * 8 + 6, color: cols[Math.floor(Math.random() * cols.length)],
+                    rot: Math.random() * 360, vRot: (Math.random() - 0.5) * 10, alpha: 1
+                });
+            }
+        }
+
+        function drawConfetti() {
+            fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+            for (let i = confetti.length - 1; i >= 0; i--) {
+                const p = confetti[i];
+                p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.rot += p.vRot; p.alpha -= 0.015;
+                if (p.alpha <= 0) { confetti.splice(i, 1); continue; }
+                fxCtx.save(); fxCtx.globalAlpha = p.alpha; fxCtx.translate(p.x, p.y);
+                fxCtx.rotate((p.rot * Math.PI) / 180); fxCtx.fillStyle = p.color;
+                fxCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); fxCtx.restore();
+            }
+            requestAnimationFrame(drawConfetti);
+        }
+        requestAnimationFrame(drawConfetti);
+
+        function updateStarBoard() {
+            for (let i = 0; i < 5; i++) {
+                document.getElementById(`star-${i}`).classList.toggle('earned', i < starCount);
+            }
+            document.getElementById('crown-badge').textContent = crownCount > 0 ? `👑×${crownCount}` : '';
+        }
+
+        function finishLetter() {
+            playTone(523.25, 'triangle', 0.15, 0); playTone(659.25, 'triangle', 0.15, 100);
+            playTone(783.99, 'triangle', 0.15, 200); playTone(1046.50, 'triangle', 0.35, 300);
+            fireConfetti(45);
+            if (++starCount >= 5) {
+                crownCount++; updateStarBoard();
+                setTimeout(() => { starCount = 0; updateStarBoard(); }, 700);
+            } else updateStarBoard();
+            setTimeout(nextWord, 600);
+        }
+
+        document.getElementById('palette').addEventListener('click', (e) => {
+            if (e.target.dataset.color) {
+                document.querySelectorAll('#palette .color-dot').forEach(d => d.classList.remove('active'));
+                e.target.classList.add('active');
+                currentColor = e.target.dataset.color;
+            }
+        });
+
+        function fitCanvas() {
+            const r = board.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+            canvas.width = r.width * dpr; canvas.height = r.height * dpr;
+            ctx.scale(dpr, dpr);
+            fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight;
+        }
+
+        function renderWord(word) {
+            isPraiseGiven = false;
+            document.getElementById('board-frame').classList.remove('praise-glow');
+            document.getElementById('btn-done').classList.remove('ready-bounce');
+            document.querySelectorAll('.char-box').forEach(b => b.remove());
+
+            const len = word.length, h = board.clientHeight || 240;
+            const fSize = Math.min(h * 0.72, (board.clientWidth / len) * 0.85);
+            baseLineWidth = Math.max(4, Math.min(10, Math.round(11 / Math.sqrt(len))));
+
+            for (let i = 0; i < len; i++) {
+                const box = document.createElement('div'); box.className = 'char-box';
+                const span = document.createElement('span'); span.className = 'guide-char';
+                span.textContent = word[i]; span.style.fontSize = `${fSize}px`;
+                box.appendChild(span); board.insertBefore(box, canvas);
+            }
+
+            document.getElementById('page-badge').textContent = `${currentIndex + 1} / ${currentWords.length}`;
+            clearCanvas(false);
+            buildGuideMap(word, fSize);
+            speakCurrentWord();
+        }
+
+        function buildGuideMap(word, fontSize) {
+            charGuideMaps = [];
+            const w = board.clientWidth, h = board.clientHeight;
+            if (!w || !h) return;
+            const off = document.createElement('canvas'); off.width = w; off.height = h;
+            const octx = off.getContext('2d', { willReadFrequently: true });
+            const colW = w / word.length;
+
+            for (let i = 0; i < word.length; i++) {
+                octx.fillStyle = '#fff'; octx.fillRect(0, 0, w, h);
+                octx.fillStyle = '#000'; octx.font = `800 ${fontSize}px 'Nanum Gothic'`;
+                octx.textAlign = 'center'; octx.textBaseline = 'middle';
+                octx.fillText(word[i], colW * i + colW / 2, h / 2);
+
+                const data = octx.getImageData(0, 0, w, h).data, pts = [];
+                for (let y = 0; y < h; y += 8) {
+                    for (let x = 0; x < w; x += 8) {
+                        if (data[(y * w + x) * 4] < 120) pts.push({ x, y, hit: false });
+                    }
+                }
+                charGuideMaps.push({ points: pts, hitCount: 0 });
+            }
+        }
+
+        function checkCoverage(x, y) {
+            const radSq = (baseLineWidth * 1.2) ** 2;
+            charGuideMaps.forEach(map => {
+                map.points.forEach(pt => {
+                    if (!pt.hit && ((pt.x - x) ** 2 + (pt.y - y) ** 2) <= radSq) {
+                        pt.hit = true; map.hitCount++;
+                    }
+                });
+            });
+        }
+
+        let lastPos = { x: 0, y: 0 };
+        canvas.addEventListener('pointerdown', (e) => {
+            isDrawing = true;
+            try { canvas.setPointerCapture(e.pointerId); } catch(err){}
+            const r = canvas.getBoundingClientRect();
+            lastPos = { x: e.clientX - r.left, y: e.clientY - r.top };
+            playChime();
+            ctx.beginPath(); ctx.moveTo(lastPos.x, lastPos.y);
+            ctx.strokeStyle = currentColor; ctx.lineWidth = baseLineWidth;
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineTo(lastPos.x, lastPos.y); ctx.stroke();
+            checkCoverage(lastPos.x, lastPos.y);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing) return;
+            const r = canvas.getBoundingClientRect();
+            const pos = { x: e.clientX - r.left, y: e.clientY - r.top };
+            if (Math.hypot(pos.x - lastPos.x, pos.y - lastPos.y) > 16) {
+                playChime(); lastPos = pos;
+            }
+            ctx.lineTo(pos.x, pos.y); ctx.stroke();
+            checkCoverage(pos.x, pos.y);
+        });
+
+        function endDraw() {
+            if (!isDrawing) return; isDrawing = false; ctx.closePath();
+            if (!isPraiseGiven && charGuideMaps.length > 0) {
+                const ok = charGuideMaps.every(m => m.points.length === 0 || (m.hitCount / m.points.length) >= 0.85);
+                if (ok) {
+                    isPraiseGiven = true; fireConfetti(20);
+                    document.getElementById('board-frame').classList.add('praise-glow');
+                    document.getElementById('btn-done').classList.add('ready-bounce');
+                    const toast = document.getElementById('praise-toast');
+                    toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2500);
+                }
+            }
+        }
+        canvas.addEventListener('pointerup', endDraw);
+        canvas.addEventListener('pointercancel', endDraw);
+
+        function clearCanvas(sound = true) {
+            if (sound) { playTone(320, 'sine', 0.12); playTone(220, 'sine', 0.15, 80); }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('board-frame').classList.remove('praise-glow');
+            document.getElementById('btn-done').classList.remove('ready-bounce');
+            charGuideMaps.forEach(m => { m.points.forEach(p => p.hit = false); m.hitCount = 0; });
+        }
+
+        function nextWord() { currentIndex = (currentIndex + 1) % currentWords.length; renderWord(currentWords[currentIndex]); }
+        function prevWord() { currentIndex = (currentIndex - 1 + currentWords.length) % currentWords.length; renderWord(currentWords[currentIndex]); }
+
+        initCategoryBar();
+        window.addEventListener('resize', () => { fitCanvas(); renderWord(currentWords[currentIndex]); });
+        fitCanvas(); renderWord(currentWords[currentIndex]);
+    </script>
+</body>
+</html>
