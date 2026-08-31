@@ -8,151 +8,367 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>자석 글자 조립하기</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
-    <script src="words.js?v=9.0"></script>
+    <script src="words.js?v=11.0"></script>
     <style>
-        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
         body {
-            margin: 0; padding: 8px; background-color: #fef8ee;
+            margin: 0;
+            padding: 8px;
+            background-color: #fef8ee;
             font-family: 'Gaegu', cursive, sans-serif;
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: flex-start; min-height: 100vh; min-height: 100dvh;
-            touch-action: none; overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            touch-action: none;
+            overflow: hidden;
         }
-        .header-bar {
-            width: min(94vw, 560px); display: flex;
-            align-items: center; justify-content: space-between; margin-bottom: 6px;
-        }
-        .btn-home {
-            background: #ffffff; border: 2px solid #cbd5e1; border-bottom: 3px solid #94a3b8;
-            font-family: 'Gaegu'; font-size: 16px; font-weight: bold;
-            color: #475569; padding: 4px 12px; border-radius: 14px; text-decoration: none;
-        }
-        .btn-home:active { transform: translateY(2px); border-bottom-width: 1px; }
+
         .category-scroll {
-            width: min(94vw, 560px); overflow-x: auto; white-space: nowrap;
-            display: flex; gap: 6px; padding-bottom: 6px; scrollbar-width: none;
+            width: min(94vw, 600px);
+            overflow-x: auto;
+            white-space: nowrap;
+            display: flex;
+            gap: 6px;
+            padding-bottom: 6px;
+            scrollbar-width: none;
+            flex-shrink: 0;
         }
         .category-scroll::-webkit-scrollbar { display: none; }
+
         .category-btn {
-            background: #fff; border: 2px solid #ffd166; border-bottom: 3px solid #e0ab34;
-            color: #634200; font-family: 'Gaegu'; font-size: 15px; font-weight: bold;
-            padding: 4px 12px; border-radius: 16px; cursor: pointer; flex-shrink: 0;
+            background: #fff;
+            border: 2px solid #ffd166;
+            border-bottom: 3px solid #e0ab34;
+            color: #634200;
+            font-family: 'Gaegu';
+            font-size: 15px;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            flex-shrink: 0;
         }
         .category-btn.active {
-            background: #ff7675; color: #fff; border-color: #d63031; border-bottom: 3px solid #c0392b;
+            background: #ff7675;
+            color: #fff;
+            border-color: #d63031;
+            border-bottom: 3px solid #c0392b;
+            transform: scale(1.04);
         }
+
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: min(94vw, 600px);
+            gap: 8px;
+        }
+
+        .board-frame {
+            position: relative;
+            padding: 6px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #ff7675, #fab1a0, #ffeaa7, #55efc4, #81ecec, #74b9ff, #a29bfe);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            width: 100%;
+        }
+
+        .puzzle-board {
+            width: 100%;
+            min-height: 160px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .target-word-display {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #fff4e6;
+            border: 2px dashed #ffa94d;
+            padding: 4px 14px;
+            border-radius: 30px;
+        }
+
+        .target-title { font-size: 16px; color: #d9480f; font-weight: bold; }
+        .target-text { font-family: 'Nanum Gothic'; font-size: 24px; font-weight: 800; color: #2b2b2b; }
+
+        .btn-speaker {
+            background: #fff;
+            border: 2px solid #ffd166;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .word-slots-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .char-slot-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 14px;
+            padding: 6px 8px;
+            gap: 4px;
+        }
+
+        .char-guide-label { font-family: 'Nanum Gothic'; font-size: 14px; font-weight: 800; color: #adb5bd; }
+        .jamo-slots-row { display: flex; gap: 5px; }
+
+        .drop-slot {
+            width: 48px;
+            height: 48px;
+            background: #fff;
+            border: 2px dashed #ced4da;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        /* 🌟 지금 채워야 할 슬롯 활성화 애니메이션 */
+        .drop-slot.current-step {
+            border: 2.5px solid #ff4757;
+            background: #fff5f5;
+            box-shadow: 0 0 12px rgba(255, 71, 87, 0.45);
+            animation: pulse-step 0.8s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulse-step {
+            from { transform: scale(1); }
+            to { transform: scale(1.08); }
+        }
+
+        .drop-slot.filled {
+            border-style: solid;
+            border-color: #40c057;
+            background: #ebfbee;
+            animation: none;
+            transform: scale(1);
+        }
+
+        .drop-slot-hint {
+            font-family: 'Nanum Gothic';
+            font-size: 18px;
+            color: #d1d5db;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .drop-slot.current-step .drop-slot-hint {
+            color: #ff8787;
+        }
+
+        .controls-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            gap: 6px;
+        }
+
         .status-bar {
-            width: min(94vw, 560px); display: flex; align-items: center;
-            justify-content: space-between; margin-bottom: 6px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
+
+        .header-left-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-home {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-bottom: 3px solid #94a3b8;
+            font-family: 'Gaegu';
+            font-size: 15px;
+            font-weight: bold;
+            color: #475569;
+            padding: 3px 10px;
+            border-radius: 14px;
+            text-decoration: none;
+        }
+
+        .page-badge {
+            background: #ffffff;
+            border: 2px solid #dcdde1;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #57606f;
+        }
+
         .stamp-board {
-            display: flex; align-items: center; gap: 4px; background: #fff;
-            padding: 3px 10px; border-radius: 20px; border: 2px solid #ffd166;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #fff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 2px solid #ffd166;
+            transition: transform 0.3s;
+        }
+        .stamp-board.celebrate {
+            transform: scale(1.1);
+            background-color: #fff9db;
         }
         .stamp-title { font-size: 15px; font-weight: bold; color: #d97706; }
         .stamp-star { font-size: 16px; color: #e5e7eb; transition: transform 0.2s; }
         .stamp-star.earned { color: #fbbf24; transform: scale(1.2); }
         .crown-badge { font-size: 15px; font-weight: bold; color: #d97706; margin-left: 2px; }
-        .board-frame {
-            position: relative; padding: 6px; border-radius: 22px;
-            background: linear-gradient(135deg, #ff7675, #fab1a0, #ffeaa7, #55efc4, #81ecec, #74b9ff, #a29bfe);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.08); width: min(94vw, 560px);
-        }
-        .puzzle-board {
-            width: 100%; min-height: 170px; background: #fff; border-radius: 16px;
-            padding: 10px 8px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 10px;
-        }
-        .target-word-display {
-            display: flex; align-items: center; gap: 6px; background: #fff4e6;
-            border: 2px dashed #ffa94d; padding: 4px 14px; border-radius: 30px;
-        }
-        .target-text { font-family: 'Nanum Gothic'; font-size: 24px; font-weight: 800; color: #2b2b2b; }
-        .btn-speaker {
-            background: #fff; border: 2px solid #ffd166; width: 32px; height: 32px;
-            border-radius: 50%; font-size: 16px; display: flex; align-items: center;
-            justify-content: center; cursor: pointer;
-        }
-        .word-slots-container {
-            display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;
-        }
-        .char-slot-group {
-            display: flex; flex-direction: column; align-items: center;
-            background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 14px;
-            padding: 6px 8px; gap: 4px;
-        }
-        .char-guide-label { font-family: 'Nanum Gothic'; font-size: 14px; font-weight: 800; color: #adb5bd; }
-        .jamo-slots-row { display: flex; gap: 5px; }
-        .drop-slot {
-            width: 48px; height: 48px; background: #fff; border: 2px dashed #ced4da;
-            border-radius: 12px; display: flex; align-items: center; justify-content: center;
-        }
-        .drop-slot.filled { border-style: solid; border-color: #40c057; background: #ebfbee; }
-        .drop-slot-hint { font-family: 'Nanum Gothic'; font-size: 17px; color: #d1d5db; font-weight: bold; pointer-events: none; }
+
         .magnet-tray {
-            width: min(94vw, 560px); background: #fff; border: 2px solid #e5e7eb;
-            border-radius: 18px; padding: 10px; display: flex; flex-wrap: wrap;
-            align-items: center; justify-content: center; gap: 8px; min-height: 70px;
-            margin-top: 8px;
+            width: 100%;
+            background: #fff;
+            border: 2px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 65px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
         }
+
         .magnet-piece {
-            width: 46px; height: 46px; border-radius: 12px; display: flex;
-            align-items: center; justify-content: center; font-family: 'Nanum Gothic';
-            font-size: 22px; font-weight: 800; color: #fff; cursor: grab;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.18); touch-action: none;
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Nanum Gothic';
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+            cursor: grab;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+            touch-action: none;
+            transition: transform 0.15s, opacity 0.15s;
         }
+        .magnet-piece:active { transform: scale(1.1); }
         .magnet-piece.consonant { background: linear-gradient(135deg, #4dabf7, #339af0); border: 2px solid #1c7ed6; }
         .magnet-piece.vowel { background: linear-gradient(135deg, #ff8787, #fa5252); border: 2px solid #e03131; }
-        .btn-group { margin-top: 10px; display: flex; gap: 8px; }
+
+        .btn-group {
+            margin-top: 4px;
+            display: flex;
+            gap: 8px;
+        }
+
         button.action-btn {
-            border: 2px solid #333; border-bottom: 4px solid #222; padding: 6px 16px;
-            font-family: 'Gaegu'; font-size: 18px; font-weight: bold; border-radius: 14px;
+            border: 2px solid #333;
+            border-bottom: 4px solid #222;
+            padding: 6px 16px;
+            font-family: 'Gaegu';
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 14px;
             cursor: pointer;
         }
         button.action-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
         .btn-prev { background: #68d8d6; }
         .btn-reset { background: #ffd166; }
         .btn-next { background: #06d6a0; }
+
         #fx-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+
+        /* 📱 가로 모드 (Landscape) 2단 정렬 */
+        @media (orientation: landscape) and (max-height: 520px) {
+            body { padding: 4px 12px; justify-content: space-evenly; }
+            .category-scroll { max-width: 95vw; padding-bottom: 2px; }
+            .main-layout {
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                max-width: 96vw;
+                gap: 12px;
+            }
+            .board-frame { flex: 1.1; }
+            .puzzle-board { min-height: 180px; }
+            .controls-column { flex: 1; }
+            .drop-slot, .magnet-piece { width: 42px; height: 42px; font-size: 19px; }
+        }
     </style>
 </head>
 <body>
-    <div class="header-bar">
-        <a href="index.html" class="btn-home">🏠 홈으로</a>
-        <span style="font-size: 15px; font-weight: bold; color: #57606f;" id="page-badge">1 / 1</span>
-    </div>
 
     <div class="category-scroll" id="category-bar"></div>
 
-    <div class="status-bar">
-        <div class="stamp-board" id="stamp-board">
-            <span class="stamp-title">⭐ 도장</span>
-            <span class="stamp-star" id="star-0">★</span>
-            <span class="stamp-star" id="star-1">★</span>
-            <span class="stamp-star" id="star-2">★</span>
-            <span class="stamp-star" id="star-3">★</span>
-            <span class="stamp-star" id="star-4">★</span>
-            <span class="crown-badge" id="crown-badge"></span>
-        </div>
-    </div>
-
-    <div class="board-frame">
-        <div class="puzzle-board">
-            <div class="target-word-display">
-                <span style="font-size: 16px; color: #d9480f; font-weight: bold;">단어 만들기 ➔</span>
-                <span class="target-text" id="target-word-text">사과</span>
-                <div class="btn-speaker" onclick="speakCurrentWord()">🔊</div>
+    <div class="main-layout">
+        <div class="board-frame">
+            <div class="puzzle-board">
+                <div class="target-word-display">
+                    <span class="target-title">단어 만들기 ➔</span>
+                    <span class="target-text" id="target-word-text">사과</span>
+                    <div class="btn-speaker" onclick="speakCurrentWord()">🔊</div>
+                </div>
+                <div class="word-slots-container" id="word-slots-container"></div>
             </div>
-            <div class="word-slots-container" id="word-slots-container"></div>
         </div>
-    </div>
 
-    <div class="magnet-tray" id="magnet-tray"></div>
+        <div class="controls-column">
+            <div class="status-bar">
+                <div class="header-left-tools">
+                    <a href="index.html" class="btn-home">🏠 홈</a>
+                    <div class="page-badge" id="page-badge">1 / 1</div>
+                </div>
+                <div class="stamp-board" id="stamp-board">
+                    <span class="stamp-title">⭐ 도장</span>
+                    <span class="stamp-star" id="star-0">★</span>
+                    <span class="stamp-star" id="star-1">★</span>
+                    <span class="stamp-star" id="star-2">★</span>
+                    <span class="stamp-star" id="star-3">★</span>
+                    <span class="stamp-star" id="star-4">★</span>
+                    <span class="crown-badge" id="crown-badge"></span>
+                </div>
+            </div>
 
-    <div class="btn-group">
-        <button class="action-btn btn-prev" onclick="prevWord()">◀ 이전</button>
-        <button class="action-btn btn-reset" onclick="resetPuzzle()">🔄 다시하기</button>
-        <button class="action-btn btn-next" onclick="nextWord()">다음 ▶</button>
+            <div class="magnet-tray" id="magnet-tray"></div>
+
+            <div class="btn-group">
+                <button class="action-btn btn-prev" onclick="prevWord()">◀ 이전</button>
+                <button class="action-btn btn-reset" onclick="resetPuzzle()">🔄 다시하기</button>
+                <button class="action-btn btn-next" onclick="nextWord()">다음 ▶</button>
+            </div>
+        </div>
     </div>
 
     <canvas id="fx-canvas"></canvas>
@@ -162,7 +378,12 @@
         const categoryKeys = Object.keys(categories);
         let currentCategoryKey = categoryKeys[0];
         let currentWords = categories[currentCategoryKey];
-        let currentIndex = 0, starCount = 0, crownCount = 0, isPuzzleCompleted = false;
+        let currentIndex = 0, starCount = 0, crownCount = 0;
+        let isPuzzleCompleted = false;
+
+        /* ✨ 순서 제어용 슬롯 배열 및 현재 인덱스 */
+        let slotSequence = [];
+        let currentStepIndex = 0;
 
         const CHOSUNG = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
         const JUNGSUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
@@ -186,7 +407,9 @@
                 btn.className = `category-btn ${catName === currentCategoryKey ? 'active' : ''}`;
                 btn.textContent = catName;
                 btn.onclick = () => {
-                    currentCategoryKey = catName; currentWords = categories[catName]; currentIndex = 0;
+                    currentCategoryKey = catName;
+                    currentWords = categories[catName];
+                    currentIndex = 0;
                     document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.textContent === catName));
                     renderWord(currentWords[currentIndex]);
                 };
@@ -211,6 +434,16 @@
                 osc.connect(gain); gain.connect(actx.destination);
                 osc.start(); osc.stop(actx.currentTime + duration);
             }, delay);
+        }
+
+        function soundSnap() {
+            playTone(480, 'sine', 0.08, 0, 0.35);
+            playTone(720, 'sine', 0.12, 40, 0.4);
+        }
+
+        function soundWrong() {
+            playTone(220, 'triangle', 0.12, 0, 0.2);
+            playTone(180, 'triangle', 0.15, 60, 0.2);
         }
 
         function speakCurrentWord() {
@@ -261,7 +494,11 @@
             fireConfetti();
             if (++starCount >= 5) {
                 crownCount++; updateStarBoard();
-                setTimeout(() => { starCount = 0; updateStarBoard(); }, 700);
+                document.getElementById('stamp-board').classList.add('celebrate');
+                setTimeout(() => {
+                    document.getElementById('stamp-board').classList.remove('celebrate');
+                    starCount = 0; updateStarBoard();
+                }, 700);
             } else updateStarBoard();
             setTimeout(nextWord, 600);
         }
@@ -269,30 +506,62 @@
         const slotsContainer = document.getElementById('word-slots-container');
         const tray = document.getElementById('magnet-tray');
 
+        /* ✨ 현재 채워야 할 슬롯을 시각적으로 강조 */
+        function updateActiveStepSlot() {
+            slotSequence.forEach((slot, idx) => {
+                if (idx === currentStepIndex) {
+                    slot.classList.add('current-step');
+                } else {
+                    slot.classList.remove('current-step');
+                }
+            });
+        }
+
         function renderWord(word) {
             isPuzzleCompleted = false;
+            currentStepIndex = 0;
+            slotSequence = [];
+
             document.getElementById('target-word-text').textContent = word;
             document.getElementById('page-badge').textContent = `${currentIndex + 1} / ${currentWords.length}`;
             slotsContainer.innerHTML = ''; tray.innerHTML = '';
 
-            let correctJamos = [], slotIdx = 0;
+            let correctJamos = [];
+
+            // 1. 단어의 글자 및 자음/모음 슬롯 생성 (순서대로 등록)
             for (let i = 0; i < word.length; i++) {
-                const char = word[i], jamos = decomposeChar(char);
+                const char = word[i];
+                const jamos = decomposeChar(char);
                 const group = document.createElement('div'); group.className = 'char-slot-group';
                 const label = document.createElement('div'); label.className = 'char-guide-label';
                 label.textContent = `[ ${char} ]`; group.appendChild(label);
                 const row = document.createElement('div'); row.className = 'jamo-slots-row';
 
                 jamos.forEach(jamo => {
-                    const slot = document.createElement('div'); slot.className = 'drop-slot';
-                    slot.dataset.expected = jamo; slot.dataset.slotId = `s-${slotIdx++}`;
-                    const hint = document.createElement('span'); hint.className = 'drop-slot-hint';
-                    hint.textContent = jamo; slot.appendChild(hint);
-                    setupSlotEvents(slot); row.appendChild(slot); correctJamos.push(jamo);
+                    const slot = document.createElement('div');
+                    slot.className = 'drop-slot';
+                    slot.dataset.expected = jamo;
+                    slot.dataset.seqIdx = slotSequence.length;
+
+                    const hint = document.createElement('span');
+                    hint.className = 'drop-slot-hint';
+                    hint.textContent = jamo;
+                    slot.appendChild(hint);
+
+                    setupSlotEvents(slot);
+                    row.appendChild(slot);
+                    slotSequence.push(slot);
+                    correctJamos.push(jamo);
                 });
-                group.appendChild(row); slotsContainer.appendChild(group);
+
+                group.appendChild(row);
+                slotsContainer.appendChild(group);
             }
 
+            // 첫 번째 슬롯 활성화
+            updateActiveStepSlot();
+
+            // 2. 방해 조각 섞기
             const distractors = ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅏ", "ㅓ", "ㅗ", "ㅜ", "ㅣ"];
             let pieces = [...correctJamos];
             for (let k = 0; k < 2; k++) pieces.push(distractors[Math.floor(Math.random() * distractors.length)]);
@@ -308,28 +577,49 @@
         function createPiece(jamo, id) {
             const el = document.createElement('div');
             el.className = `magnet-piece ${VOWELS.has(jamo) ? 'vowel' : 'consonant'}`;
-            el.textContent = jamo; el.id = id; el.dataset.jamo = jamo; el.draggable = true;
+            el.textContent = jamo;
+            el.id = id;
+            el.dataset.jamo = jamo;
+            el.draggable = true;
 
             el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', el.id));
+
             el.addEventListener('pointerdown', (e) => {
-                let moved = false; const startX = e.clientX, startY = e.clientY;
-                function onMove(me) { if (Math.hypot(me.clientX - startX, me.clientY - startY) > 8) moved = true; }
+                let moved = false;
+                const startX = e.clientX, startY = e.clientY;
+
+                function onMove(me) {
+                    if (Math.hypot(me.clientX - startX, me.clientY - startY) > 8) moved = true;
+                }
+
                 function onUp(ue) {
                     window.removeEventListener('pointermove', onMove);
                     window.removeEventListener('pointerup', onUp);
+
+                    const targetSlot = slotSequence[currentStepIndex];
+                    if (!targetSlot) return;
+
+                    // 1) 탭/클릭했을 때: 현재 순서의 슬롯과 글자가 맞으면 결합
                     if (!moved) {
-                        const target = Array.from(document.querySelectorAll('.drop-slot')).find(
-                            s => !s.dataset.filled && s.dataset.expected === el.dataset.jamo
-                        );
-                        if (target) snapPiece(el, target);
+                        if (el.dataset.jamo === targetSlot.dataset.expected) {
+                            snapPiece(el, targetSlot);
+                        } else {
+                            soundWrong();
+                        }
                         return;
                     }
+
+                    // 2) 드래그해서 놓았을 때: 현재 순서의 슬롯 위에 놓았는지 확인
                     const below = document.elementFromPoint(ue.clientX, ue.clientY);
                     const slot = below ? below.closest('.drop-slot') : null;
-                    if (slot && !slot.dataset.filled && slot.dataset.expected === el.dataset.jamo) {
-                        snapPiece(el, slot);
+
+                    if (slot === targetSlot && el.dataset.jamo === targetSlot.dataset.expected) {
+                        snapPiece(el, targetSlot);
+                    } else {
+                        soundWrong();
                     }
                 }
+
                 window.addEventListener('pointermove', onMove);
                 window.addEventListener('pointerup', onUp);
             });
@@ -340,21 +630,43 @@
             slot.addEventListener('dragover', (e) => e.preventDefault());
             slot.addEventListener('drop', (e) => {
                 e.preventDefault();
-                if (slot.dataset.filled) return;
-                const piece = document.getElementById(e.dataTransfer.getData('text/plain'));
-                if (piece && piece.dataset.jamo === slot.dataset.expected) snapPiece(piece, slot);
+                const targetSlot = slotSequence[currentStepIndex];
+                if (slot !== targetSlot) {
+                    soundWrong();
+                    return;
+                }
+
+                const pieceId = e.dataTransfer.getData('text/plain');
+                const piece = document.getElementById(pieceId);
+                if (piece && piece.dataset.jamo === slot.dataset.expected) {
+                    snapPiece(piece, slot);
+                } else {
+                    soundWrong();
+                }
             });
         }
 
         function snapPiece(piece, slot) {
-            playTone(480, 'sine', 0.08, 0); playTone(720, 'sine', 0.12, 40);
-            slot.classList.add('filled'); slot.dataset.filled = "true";
-            const hint = slot.querySelector('.drop-slot-hint'); if (hint) hint.style.display = 'none';
-            slot.appendChild(piece); piece.draggable = false; piece.style.cursor = 'default';
+            soundSnap();
+            slot.classList.remove('current-step');
+            slot.classList.add('filled');
+            slot.dataset.filled = "true";
 
-            const all = document.querySelectorAll('.drop-slot');
-            if (Array.from(all).every(s => s.dataset.filled) && !isPuzzleCompleted) {
-                isPuzzleCompleted = true; handleSuccess();
+            const hint = slot.querySelector('.drop-slot-hint');
+            if (hint) hint.style.display = 'none';
+
+            slot.appendChild(piece);
+            piece.draggable = false;
+            piece.style.cursor = 'default';
+
+            // 다음 순서 슬롯으로 이동
+            currentStepIndex++;
+
+            if (currentStepIndex < slotSequence.length) {
+                updateActiveStepSlot();
+            } else if (!isPuzzleCompleted) {
+                isPuzzleCompleted = true;
+                handleSuccess();
             }
         }
 
