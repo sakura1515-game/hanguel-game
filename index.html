@@ -10,7 +10,7 @@
     <title>알록달록 한글 단어 놀이터</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
     
-    <script src="words.js?v=4.0"></script>
+    <script src="words.js?v=5.0"></script>
 
     <style>
         * {
@@ -443,13 +443,13 @@
         let currentWords = categories[currentCategoryKey] || ["가"];
         let currentIndex = 0;
         let isDrawing = false;
-        let currentColor = '#1e90ff'; // 기본 파란색
+        let currentColor = '#1e90ff';
         let baseLineWidth = 7;
         let starCount = 0;
         let crownCount = 0;
 
-        /* ✨ 글자별 독립 판정 데이터 */
-        let charGuideMaps = []; // 각 글자별 { points: [], hitCount: 0 }
+        /* ✨ 경량화된 글자별 판정 저장소 */
+        let charGuideMaps = [];
         let isLetterCompleted = false;
 
         const board = document.getElementById('game-board');
@@ -486,52 +486,60 @@
             renderWord(currentWords[currentIndex]);
         }
 
-        /* 🔊 Web Audio 사운드 시스템 */
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        /* 🔊 사운드 시스템 */
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
         const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
         let noteIndex = 0;
         let lastToneTime = 0;
 
         function playChimeNote() {
             const now = Date.now();
-            if (now - lastToneTime < 85) return;
+            if (now - lastToneTime < 90) return;
             lastToneTime = now;
 
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
+            const actx = getAudioContext();
             const freq = chimeNotes[noteIndex % chimeNotes.length];
             noteIndex++;
 
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            const osc = actx.createOscillator();
+            const gain = actx.createGain();
 
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.28, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
+            osc.frequency.setValueAtTime(freq, actx.currentTime);
+            gain.gain.setValueAtTime(0.25, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.2);
 
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(actx.destination);
 
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.25);
+            osc.stop(actx.currentTime + 0.2);
         }
 
         function playTone(freq, type, duration, startDelay = 0, volume = 0.35) {
             setTimeout(() => {
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                const actx = getAudioContext();
+                const osc = actx.createOscillator();
+                const gain = actx.createGain();
                 osc.type = type;
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.frequency.setValueAtTime(freq, actx.currentTime);
+                gain.gain.setValueAtTime(volume, actx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + duration);
 
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(actx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + duration);
+                osc.stop(actx.currentTime + duration);
             }, startDelay);
         }
 
@@ -585,11 +593,11 @@
             window.speechSynthesis.speak(utter);
         }
 
-        /* 폭죽 효과 */
+        /* 폭죽 파티클 */
         let confettiParticles = [];
         function fireConfetti() {
             const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6', '#ffd32a'];
-            for (let i = 0; i < 40; i++) {
+            for (let i = 0; i < 35; i++) {
                 confettiParticles.push({
                     x: window.innerWidth / 2,
                     y: window.innerHeight / 2,
@@ -691,13 +699,14 @@
             fxCanvas.height = window.innerHeight;
         }
 
-        /* ✨ 정밀 글자별(Char-by-Char) 가이드 픽셀 맵 빌드 */
+        /* ✨ 렉 없이 빠른 초경량 가이드 포인트 생성 */
         function buildLetterGuideMap(word, fontSize) {
             charGuideMaps = [];
-
-            const offCanvas = document.createElement('canvas');
             const w = board.clientWidth;
             const h = board.clientHeight;
+            if (w === 0 || h === 0) return;
+
+            const offCanvas = document.createElement('canvas');
             offCanvas.width = w;
             offCanvas.height = h;
             const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
@@ -720,7 +729,8 @@
 
                 const imgData = offCtx.getImageData(0, 0, w, h).data;
                 const points = [];
-                const step = 5; // 5px 단위로 정밀 샘플링
+                // 연산량 폭증 방지 (10px 간격 샘플링)
+                const step = 10;
 
                 for (let y = 0; y < h; y += step) {
                     for (let x = 0; x < w; x += step) {
@@ -738,12 +748,11 @@
             }
         }
 
-        /* 획 밟음 체크 (정밀 반경 적용) */
+        /* 획 판정 체크 */
         function checkStrokeCoverage(x, y) {
             if (charGuideMaps.length === 0 || isLetterCompleted) return;
 
-            // 판정 반경을 실제 펜 굵기에 알맞게 축소 (허수 판정 방지)
-            const radiusSq = (baseLineWidth * 1.1) ** 2;
+            const radiusSq = (baseLineWidth * 1.5) ** 2;
 
             for (let c = 0; c < charGuideMaps.length; c++) {
                 const charMap = charGuideMaps[c];
@@ -803,7 +812,7 @@
         function startDraw(e) {
             if (isLetterCompleted) return;
             isDrawing = true;
-            canvas.setPointerCapture(e.pointerId);
+            try { canvas.setPointerCapture(e.pointerId); } catch(err){}
             const pos = getPos(e);
             lastDrawPos = pos;
             playChimeNote();
@@ -831,7 +840,7 @@
             const pos = getPos(e);
 
             const dist = Math.hypot(pos.x - lastDrawPos.x, pos.y - lastDrawPos.y);
-            if (dist > 18) {
+            if (dist > 16) {
                 playChimeNote();
                 lastDrawPos = pos;
             }
@@ -846,15 +855,13 @@
             if (!isDrawing) return;
             isDrawing = false;
             ctx.closePath();
-            try {
-                canvas.releasePointerCapture(e.pointerId);
-            } catch (err) {}
+            try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
 
-            /* ✨ 글자별 80% 이상 완성되었는지 검사 (모든 글자를 다 써야 완성) */
+            /* ✨ 글자별 75% 이상 그렸을 때 부드럽게 완성 */
             if (charGuideMaps.length > 0 && !isLetterCompleted) {
                 const isAllCharsFinished = charGuideMaps.every(charMap => {
                     if (charMap.points.length === 0) return true;
-                    return (charMap.hitCount / charMap.points.length) >= 0.80; // 각 글자당 80% 기준
+                    return (charMap.hitCount / charMap.points.length) >= 0.75;
                 });
 
                 if (isAllCharsFinished) {
@@ -872,7 +879,6 @@
             if (playSound) soundClear();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 판정 데이터 초기화
             charGuideMaps.forEach(charMap => {
                 charMap.points.forEach(pt => pt.hit = false);
                 charMap.hitCount = 0;
@@ -885,4 +891,21 @@
         }
 
         function prevWord() {
-            currentIndex
+            currentIndex = (currentIndex - 1 + currentWords.length) % currentWords.length;
+            renderWord(currentWords[currentIndex]);
+        }
+
+        function updateLayout() {
+            fitCanvas();
+            renderWord(currentWords[currentIndex]);
+        }
+
+        initCategoryBar();
+        window.addEventListener('resize', updateLayout);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateLayout, 150);
+        });
+        document.fonts.ready.then(updateLayout);
+    </script>
+</body>
+</html>
