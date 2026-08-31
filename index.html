@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>알록달록 한글 단어 놀이터</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
-    
-    <!-- 단어 카테고리 파일 불러오기 -->
     <script src="words.js"></script>
 
     <style>
@@ -71,12 +69,6 @@
             transform: scale(1.04);
         }
 
-        .category-btn:active {
-            transform: translateY(2px);
-            border-bottom-width: 1px;
-        }
-
-        /* 메인 콘텐츠 래퍼 */
         .main-layout {
             display: flex;
             flex-direction: column;
@@ -93,6 +85,7 @@
             width: min(92vw, 560px);
             margin-bottom: 6px;
             flex-shrink: 0;
+            position: relative;
         }
 
         .stamp-board {
@@ -104,6 +97,13 @@
             border-radius: 20px;
             border: 2px solid #ffd166;
             box-shadow: 0 3px 6px rgba(0,0,0,0.04);
+            transition: transform 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .stamp-board.celebrate {
+            transform: scale(1.1);
+            background-color: #fff9db;
+            border-color: #f59f00;
         }
 
         .stamp-title {
@@ -115,13 +115,20 @@
         .stamp-star {
             font-size: 17px;
             color: #e5e7eb;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.25s;
         }
 
         .stamp-star.earned {
             color: #fbbf24;
             transform: scale(1.2);
             filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.5));
+        }
+
+        .crown-badge {
+            font-size: 16px;
+            font-weight: bold;
+            color: #d97706;
+            margin-left: 4px;
         }
 
         .page-badge {
@@ -181,10 +188,6 @@
             cursor: pointer;
             box-shadow: 0 3px 8px rgba(0,0,0,0.05);
             flex-shrink: 0;
-        }
-
-        .btn-speaker:active {
-            transform: scale(0.92);
         }
 
         /* 4. 칠판 프레임 */
@@ -304,60 +307,7 @@
             z-index: 999;
         }
 
-        /* 모달 팝업 */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s ease;
-        }
-
-        .modal-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal-box {
-            background: white;
-            padding: 20px 28px;
-            border-radius: 24px;
-            text-align: center;
-            box-shadow: 0 16px 32px rgba(0,0,0,0.2);
-            border: 4px solid #ffd166;
-            transform: scale(0.8);
-            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .modal-overlay.show .modal-box {
-            transform: scale(1);
-        }
-
-        .modal-icon {
-            font-size: 48px;
-            margin-bottom: 4px;
-            animation: bounce 0.6s infinite alternate ease-in-out;
-        }
-
-        .modal-text {
-            font-size: 22px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 12px;
-            white-space: pre-line;
-        }
-
-        @keyframes bounce {
-            from { transform: translateY(0); }
-            to { transform: translateY(-8px); }
-        }
-
-        /* 📱 가로 모드 (Landscape) 전용 최적화 레이아웃 */
+        /* 가로 모드 (Landscape) */
         @media (orientation: landscape) and (max-height: 520px) {
             body {
                 padding: 4px 12px;
@@ -375,7 +325,6 @@
                 border-radius: 14px;
             }
 
-            /* 가로 분할 2단 레이아웃 (왼쪽: 칠판 / 오른쪽: 컨트롤) */
             .main-layout {
                 flex-direction: row;
                 align-items: center;
@@ -402,7 +351,6 @@
             }
 
             #game-board {
-                /* 가로 모드 높이에 맞춰 칠판 크기 자동 최적화 */
                 width: min(58vw, 480px);
                 height: min(65vh, 260px);
             }
@@ -425,33 +373,29 @@
 </head>
 <body>
 
-    <!-- 카테고리 탭 목록 -->
     <div class="category-scroll-container" id="category-bar"></div>
 
     <div class="main-layout">
-        <!-- 무지개 칠판 보드 (왼쪽/중앙) -->
         <div class="board-frame">
             <div id="game-board">
                 <canvas id="draw-canvas"></canvas>
             </div>
         </div>
 
-        <!-- 컨트롤 영역 (가로 모드 시 오른쪽 배치) -->
         <div class="controls-column">
-            <!-- 상단 도장판 & 페이지 현황 -->
             <div class="status-bar">
-                <div class="stamp-board">
+                <div class="stamp-board" id="stamp-board-box">
                     <span class="stamp-title">⭐ 도장</span>
                     <span class="stamp-star" id="star-0">★</span>
                     <span class="stamp-star" id="star-1">★</span>
                     <span class="stamp-star" id="star-2">★</span>
                     <span class="stamp-star" id="star-3">★</span>
                     <span class="stamp-star" id="star-4">★</span>
+                    <span class="crown-badge" id="crown-badge"></span>
                 </div>
                 <div class="page-badge" id="page-badge">1 / 1</div>
             </div>
 
-            <!-- 팔레트 & 발음 듣기 -->
             <div class="top-bar">
                 <div class="palette-container" id="palette">
                     <div class="color-dot active" style="background-color: #ff4757;" data-color="#ff4757"></div>
@@ -464,7 +408,6 @@
                 <div class="btn-speaker" onclick="speakCurrentWord()" title="소리 듣기">🔊</div>
             </div>
 
-            <!-- 컨트롤 버튼 -->
             <div class="btn-group">
                 <button class="action-btn btn-prev" onclick="prevWord()">◀ 이전</button>
                 <button class="action-btn btn-clear" onclick="clearCanvas()">🧼 지우기</button>
@@ -475,15 +418,6 @@
     </div>
 
     <canvas id="fx-canvas"></canvas>
-
-    <!-- 보상 팝업 -->
-    <div class="modal-overlay" id="reward-modal" onclick="closeRewardModal()">
-        <div class="modal-box">
-            <div class="modal-icon" id="modal-icon">👑</div>
-            <div class="modal-text" id="modal-text">별 5개 완성! 최고야!</div>
-            <button class="action-btn btn-next" style="margin: 0 auto;">계속하기 💖</button>
-        </div>
-    </div>
 
     <script>
         const defaultCategories = {
@@ -502,6 +436,7 @@
         let currentColor = '#ff4757';
         let baseLineWidth = 7;
         let starCount = 0;
+        let crownCount = 0;
 
         const board = document.getElementById('game-board');
         const canvas = document.getElementById('draw-canvas');
@@ -511,8 +446,9 @@
         const fxCtx = fxCanvas.getContext('2d');
         const categoryBar = document.getElementById('category-bar');
         const pageBadge = document.getElementById('page-badge');
+        const stampBoardBox = document.getElementById('stamp-board-box');
+        const crownBadge = document.getElementById('crown-badge');
 
-        /* 카테고리 탭 초기화 */
         function initCategoryBar() {
             categoryBar.innerHTML = '';
             categoryKeys.forEach(catName => {
@@ -536,7 +472,7 @@
             renderWord(currentWords[currentIndex]);
         }
 
-        /* Web Audio 사운드 시스템 */
+        /* 🔊 Web Audio 사운드 시스템 (볼륨 증폭) */
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
         let noteIndex = 0;
@@ -557,25 +493,30 @@
 
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.22);
+
+            // 실로폰 볼륨: 0.08 -> 0.28 (약 3.5배 증폭)
+            gain.gain.setValueAtTime(0.28, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
 
             osc.connect(gain);
             gain.connect(audioCtx.destination);
 
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.22);
+            osc.stop(audioCtx.currentTime + 0.25);
         }
 
-        function playTone(freq, type, duration, startDelay = 0) {
+        function playTone(freq, type, duration, startDelay = 0, volume = 0.35) {
             setTimeout(() => {
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+
+                // 효과음 기본 볼륨: 0.12 -> 0.35 (약 3배 증폭)
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
@@ -584,18 +525,20 @@
         }
 
         function soundSuccess() {
-            playTone(523.25, 'triangle', 0.15, 0);
-            playTone(659.25, 'triangle', 0.15, 100);
-            playTone(783.99, 'triangle', 0.15, 200);
-            playTone(1046.50, 'triangle', 0.35, 300);
+            // 완성 팡파레 볼륨 강화
+            playTone(523.25, 'triangle', 0.15, 0, 0.35);
+            playTone(659.25, 'triangle', 0.15, 100, 0.35);
+            playTone(783.99, 'triangle', 0.15, 200, 0.35);
+            playTone(1046.50, 'triangle', 0.35, 300, 0.45);
         }
 
         function soundClear() {
-            playTone(320, 'sine', 0.12, 0);
-            playTone(220, 'sine', 0.15, 80);
+            // 지우기 뽀글 소리 강화
+            playTone(320, 'sine', 0.12, 0, 0.32);
+            playTone(220, 'sine', 0.15, 80, 0.32);
         }
 
-        /* TTS */
+        /* 🔊 음성 읽어주기 (TTS 볼륨 및 선명도 강화) */
         function speakCurrentWord() {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
@@ -604,6 +547,7 @@
             utter.lang = 'ko-KR';
             utter.rate = 0.85;
             utter.pitch = 1.25;
+            utter.volume = 1.0; // TTS 최대 볼륨
             window.speechSynthesis.speak(utter);
         }
 
@@ -611,7 +555,7 @@
         let confettiParticles = [];
         function fireConfetti() {
             const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6', '#ffd32a'];
-            for (let i = 0; i < 45; i++) {
+            for (let i = 0; i < 40; i++) {
                 confettiParticles.push({
                     x: window.innerWidth / 2,
                     y: window.innerHeight / 2,
@@ -653,7 +597,7 @@
         }
         requestAnimationFrame(updateAndDrawConfetti);
 
-        /* 도장 & 모달 */
+        /* 도장 & 진행 */
         function updateStarBoard() {
             for (let i = 0; i < 5; i++) {
                 const star = document.getElementById(`star-${i}`);
@@ -663,39 +607,34 @@
                     star.classList.remove('earned');
                 }
             }
+            crownBadge.textContent = crownCount > 0 ? `👑×${crownCount}` : '';
         }
 
         function finishLetter() {
             soundSuccess();
             fireConfetti();
             starCount++;
+
             if (starCount >= 5) {
+                crownCount++;
                 updateStarBoard();
+                
+                stampBoardBox.classList.add('celebrate');
                 setTimeout(() => {
-                    showRewardModal('👑', '별 5개 완성!\n오늘 한글 왕이에요!');
+                    stampBoardBox.classList.remove('celebrate');
                     starCount = 0;
-                }, 400);
+                    updateStarBoard();
+                }, 700);
             } else {
                 updateStarBoard();
-                setTimeout(() => {
-                    nextWord();
-                }, 600);
             }
+
+            setTimeout(() => {
+                nextWord();
+            }, 350);
         }
 
-        function showRewardModal(icon, text) {
-            document.getElementById('modal-icon').textContent = icon;
-            document.getElementById('modal-text').innerText = text;
-            document.getElementById('reward-modal').classList.add('show');
-        }
-
-        function closeRewardModal() {
-            document.getElementById('reward-modal').classList.remove('show');
-            updateStarBoard();
-            nextWord();
-        }
-
-        /* 칠판 렌더링 */
+        /* 칠판 & 드로잉 */
         palette.addEventListener('click', (e) => {
             if (e.target.classList.contains('color-dot')) {
                 document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
