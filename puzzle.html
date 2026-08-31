@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>자석 글자 조립하기</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
-    <script src="words.js?v=11.0"></script>
+    <script src="words.js?v=13.0"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -138,9 +138,18 @@
             border-radius: 14px;
             padding: 6px 8px;
             gap: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .char-slot-group.completed {
+            border-color: #40c057;
+            background-color: #f4fce3;
+            transform: scale(1.03);
         }
 
         .char-guide-label { font-family: 'Nanum Gothic'; font-size: 14px; font-weight: 800; color: #adb5bd; }
+        .char-slot-group.completed .char-guide-label { color: #2b8a3e; }
+
         .jamo-slots-row { display: flex; gap: 5px; }
 
         .drop-slot {
@@ -156,7 +165,6 @@
             position: relative;
         }
 
-        /* 🌟 지금 채워야 할 슬롯 활성화 애니메이션 */
         .drop-slot.current-step {
             border: 2.5px solid #ff4757;
             background: #fff5f5;
@@ -338,7 +346,7 @@
                 <div class="target-word-display">
                     <span class="target-title">단어 만들기 ➔</span>
                     <span class="target-text" id="target-word-text">사과</span>
-                    <div class="btn-speaker" onclick="speakCurrentWord()">🔊</div>
+                    <div class="btn-speaker" onclick="speakText(currentWords[currentIndex])">🔊</div>
                 </div>
                 <div class="word-slots-container" id="word-slots-container"></div>
             </div>
@@ -381,7 +389,6 @@
         let currentIndex = 0, starCount = 0, crownCount = 0;
         let isPuzzleCompleted = false;
 
-        /* ✨ 순서 제어용 슬롯 배열 및 현재 인덱스 */
         let slotSequence = [];
         let currentStepIndex = 0;
 
@@ -441,16 +448,41 @@
             playTone(720, 'sine', 0.12, 40, 0.4);
         }
 
+        function soundCharDone() {
+            playTone(523.25, 'sine', 0.12, 0, 0.3);
+            playTone(783.99, 'sine', 0.18, 80, 0.35);
+        }
+
         function soundWrong() {
             playTone(220, 'triangle', 0.12, 0, 0.2);
             playTone(180, 'triangle', 0.15, 60, 0.2);
         }
 
-        function speakCurrentWord() {
+        let bestVoice = null;
+        function updateBestVoice() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            const koVoices = voices.filter(v => v.lang.includes('ko') || v.lang.includes('KO'));
+            if (koVoices.length > 0) {
+                bestVoice = koVoices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')) ||
+                            koVoices.find(v => v.name.includes('Siri') || v.name.includes('Yuna')) || koVoices[0];
+            }
+        }
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = updateBestVoice;
+            updateBestVoice();
+        }
+
+        function speakText(text) {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(currentWords[currentIndex]);
-            utter.lang = 'ko-KR'; utter.rate = 0.85; utter.pitch = 1.25;
+            if (!bestVoice) updateBestVoice();
+
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'ko-KR';
+            utter.rate = 0.85;
+            utter.pitch = 1.25;
+            if (bestVoice) utter.voice = bestVoice;
             window.speechSynthesis.speak(utter);
         }
 
@@ -488,25 +520,40 @@
             document.getElementById('crown-badge').textContent = crownCount > 0 ? `👑×${crownCount}` : '';
         }
 
+        /* 🌟 전체 완성 처리 (충분한 텀을 두고 전체 단어 읽기) */
         function handleSuccess() {
-            playTone(523.25, 'triangle', 0.15, 0); playTone(659.25, 'triangle', 0.15, 100);
-            playTone(783.99, 'triangle', 0.15, 200); playTone(1046.50, 'triangle', 0.35, 300);
-            fireConfetti();
-            if (++starCount >= 5) {
-                crownCount++; updateStarBoard();
-                document.getElementById('stamp-board').classList.add('celebrate');
-                setTimeout(() => {
-                    document.getElementById('stamp-board').classList.remove('celebrate');
-                    starCount = 0; updateStarBoard();
-                }, 700);
-            } else updateStarBoard();
-            setTimeout(nextWord, 600);
+            // 마지막 글자 TTS가 끝날 때까지 0.75초 기다린 뒤 전체 단어 읽기 & 팡파레 시작
+            setTimeout(() => {
+                playTone(523.25, 'triangle', 0.15, 0);
+                playTone(659.25, 'triangle', 0.15, 100);
+                playTone(783.99, 'triangle', 0.15, 200);
+                playTone(1046.50, 'triangle', 0.35, 300);
+                fireConfetti();
+
+                // 단어 전체 또렷하게 읽기
+                speakText(currentWords[currentIndex]);
+
+                if (++starCount >= 5) {
+                    crownCount++;
+                    updateStarBoard();
+                    document.getElementById('stamp-board').classList.add('celebrate');
+                    setTimeout(() => {
+                        document.getElementById('stamp-board').classList.remove('celebrate');
+                        starCount = 0;
+                        updateStarBoard();
+                    }, 700);
+                } else {
+                    updateStarBoard();
+                }
+            }, 750);
+
+            // 전체 음성 및 축하가 끝난 후 다음 단어로 부드럽게 이동
+            setTimeout(nextWord, 2100);
         }
 
         const slotsContainer = document.getElementById('word-slots-container');
         const tray = document.getElementById('magnet-tray');
 
-        /* ✨ 현재 채워야 할 슬롯을 시각적으로 강조 */
         function updateActiveStepSlot() {
             slotSequence.forEach((slot, idx) => {
                 if (idx === currentStepIndex) {
@@ -524,23 +571,33 @@
 
             document.getElementById('target-word-text').textContent = word;
             document.getElementById('page-badge').textContent = `${currentIndex + 1} / ${currentWords.length}`;
-            slotsContainer.innerHTML = ''; tray.innerHTML = '';
+            slotsContainer.innerHTML = '';
+            tray.innerHTML = '';
 
             let correctJamos = [];
 
-            // 1. 단어의 글자 및 자음/모음 슬롯 생성 (순서대로 등록)
             for (let i = 0; i < word.length; i++) {
                 const char = word[i];
                 const jamos = decomposeChar(char);
-                const group = document.createElement('div'); group.className = 'char-slot-group';
-                const label = document.createElement('div'); label.className = 'char-guide-label';
-                label.textContent = `[ ${char} ]`; group.appendChild(label);
-                const row = document.createElement('div'); row.className = 'jamo-slots-row';
+                const group = document.createElement('div');
+                group.className = 'char-slot-group';
+                group.dataset.char = char;
+                group.dataset.charIndex = i;
+
+                const label = document.createElement('div');
+                label.className = 'char-guide-label';
+                label.textContent = `[ ${char} ]`;
+                group.appendChild(label);
+
+                const row = document.createElement('div');
+                row.className = 'jamo-slots-row';
 
                 jamos.forEach(jamo => {
                     const slot = document.createElement('div');
                     slot.className = 'drop-slot';
                     slot.dataset.expected = jamo;
+                    slot.dataset.char = char;
+                    slot.dataset.charIndex = i;
                     slot.dataset.seqIdx = slotSequence.length;
 
                     const hint = document.createElement('span');
@@ -558,10 +615,8 @@
                 slotsContainer.appendChild(group);
             }
 
-            // 첫 번째 슬롯 활성화
             updateActiveStepSlot();
 
-            // 2. 방해 조각 섞기
             const distractors = ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅏ", "ㅓ", "ㅗ", "ㅜ", "ㅣ"];
             let pieces = [...correctJamos];
             for (let k = 0; k < 2; k++) pieces.push(distractors[Math.floor(Math.random() * distractors.length)]);
@@ -571,7 +626,8 @@
                 const piece = createPiece(jamo, `p-${idx}`);
                 tray.appendChild(piece);
             });
-            speakCurrentWord();
+
+            speakText(word);
         }
 
         function createPiece(jamo, id) {
@@ -599,7 +655,6 @@
                     const targetSlot = slotSequence[currentStepIndex];
                     if (!targetSlot) return;
 
-                    // 1) 탭/클릭했을 때: 현재 순서의 슬롯과 글자가 맞으면 결합
                     if (!moved) {
                         if (el.dataset.jamo === targetSlot.dataset.expected) {
                             snapPiece(el, targetSlot);
@@ -609,7 +664,6 @@
                         return;
                     }
 
-                    // 2) 드래그해서 놓았을 때: 현재 순서의 슬롯 위에 놓았는지 확인
                     const below = document.elementFromPoint(ue.clientX, ue.clientY);
                     const slot = below ? below.closest('.drop-slot') : null;
 
@@ -659,7 +713,20 @@
             piece.draggable = false;
             piece.style.cursor = 'default';
 
-            // 다음 순서 슬롯으로 이동
+            const currentCharIndex = slot.dataset.charIndex;
+            const currentChar = slot.dataset.char;
+            const slotsOfSameChar = Array.from(document.querySelectorAll(`.drop-slot[data-char-index="${currentCharIndex}"]`));
+            const isThisCharCompleted = slotsOfSameChar.every(s => s.dataset.filled === "true");
+
+            if (isThisCharCompleted) {
+                const charGroup = document.querySelector(`.char-slot-group[data-char-index="${currentCharIndex}"]`);
+                if (charGroup) charGroup.classList.add('completed');
+                soundCharDone();
+
+                // 음절 완성 시 해당 글자 발음
+                speakText(currentChar);
+            }
+
             currentStepIndex++;
 
             if (currentStepIndex < slotSequence.length) {
