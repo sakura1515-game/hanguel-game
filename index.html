@@ -10,7 +10,7 @@
     <title>알록달록 한글 단어 놀이터</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
     
-    <script src="words.js?v=5.0"></script>
+    <script src="words.js?v=6.0"></script>
 
     <style>
         * {
@@ -35,7 +35,7 @@
             overflow: hidden;
         }
 
-        /* 1. 카테고리 선택 바 */
+        /* 1. 카테고리 바 */
         .category-scroll-container {
             width: 100%;
             max-width: 580px;
@@ -74,11 +74,6 @@
             transform: scale(1.04);
         }
 
-        .category-btn:active {
-            transform: translateY(2px);
-            border-bottom-width: 1px;
-        }
-
         .main-layout {
             display: flex;
             flex-direction: column;
@@ -87,7 +82,7 @@
             max-width: 580px;
         }
 
-        /* 2. 상단 상태창 */
+        /* 2. 상태창 & 칭찬 알림 */
         .status-bar {
             display: flex;
             align-items: center;
@@ -107,7 +102,7 @@
             border-radius: 20px;
             border: 2px solid #ffd166;
             box-shadow: 0 3px 6px rgba(0,0,0,0.04);
-            transition: transform 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+            transition: transform 0.3s ease, background-color 0.3s ease;
         }
 
         .stamp-board.celebrate {
@@ -151,7 +146,7 @@
             color: #57606f;
         }
 
-        /* 3. 팔레트 & 스피커 바 */
+        /* 3. 팔레트 */
         .top-bar {
             display: flex;
             align-items: center;
@@ -200,7 +195,7 @@
             flex-shrink: 0;
         }
 
-        /* 4. 칠판 프레임 */
+        /* 4. 칠판 프레임 및 칭찬 효과 */
         .board-frame {
             position: relative;
             padding: 6px;
@@ -208,6 +203,18 @@
             background: linear-gradient(135deg, #ff7675, #fab1a0, #ffeaa7, #55efc4, #81ecec, #74b9ff, #a29bfe);
             box-shadow: 0 6px 16px rgba(0,0,0,0.08);
             flex-shrink: 0;
+            transition: box-shadow 0.3s ease;
+        }
+
+        /* 🌟 잘 그렸을 때 프레임 발광 효과 */
+        .board-frame.praise-glow {
+            box-shadow: 0 0 25px rgba(255, 159, 243, 0.9), 0 0 10px rgba(116, 185, 255, 0.8);
+            animation: pulse-glow 1.2s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { transform: scale(1); }
+            to { transform: scale(1.02); }
         }
 
         #game-board {
@@ -274,7 +281,31 @@
             touch-action: none;
         }
 
-        /* 5. 하단 버튼 */
+        /* 🌟 칭찬 말풍선 배너 */
+        .praise-toast {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-30px);
+            background: rgba(255, 107, 129, 0.95);
+            color: #fff;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 19px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .praise-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 5. 버튼 */
         .btn-group {
             margin-top: 10px;
             display: flex;
@@ -307,6 +338,19 @@
         .btn-done { background-color: #ff9ff3; color: #57004f; }
         .btn-next { background-color: #06d6a0; color: #034b38; }
 
+        /* 🌟 잘 그렸을 때 완성 버튼 튀어오름 효과 */
+        .btn-done.ready-bounce {
+            animation: bounce-ready 0.6s infinite alternate ease-in-out;
+            background-color: #ff4757;
+            color: #ffffff;
+            border-color: #b33939;
+        }
+
+        @keyframes bounce-ready {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.12); box-shadow: 0 0 14px rgba(255, 71, 87, 0.7); }
+        }
+
         #fx-canvas {
             position: fixed;
             top: 0;
@@ -317,7 +361,7 @@
             z-index: 999;
         }
 
-        /* 📱 가로 모드 (Landscape) */
+        /* 📱 가로 모드 */
         @media (orientation: landscape) and (max-height: 520px) {
             body {
                 padding: 4px 12px;
@@ -327,12 +371,6 @@
             .category-scroll-container {
                 max-width: 95vw;
                 padding-bottom: 2px;
-            }
-
-            .category-btn {
-                font-size: 14px;
-                padding: 3px 10px;
-                border-radius: 14px;
             }
 
             .main-layout {
@@ -386,7 +424,8 @@
     <div class="category-scroll-container" id="category-bar"></div>
 
     <div class="main-layout">
-        <div class="board-frame">
+        <div class="board-frame" id="board-frame-box">
+            <div class="praise-toast" id="praise-toast">🎉 참 잘했어요! 멋져요! 👏</div>
             <div id="game-board">
                 <canvas id="draw-canvas"></canvas>
             </div>
@@ -421,7 +460,7 @@
             <div class="btn-group">
                 <button class="action-btn btn-prev" onclick="prevWord()">◀ 이전</button>
                 <button class="action-btn btn-clear" onclick="clearCanvas()">🧼 지우기</button>
-                <button class="action-btn btn-done" onclick="finishLetter()">✨ 완성!</button>
+                <button class="action-btn btn-done" id="btn-done" onclick="finishLetter()">✨ 완성!</button>
                 <button class="action-btn btn-next" onclick="nextWord()">다음 ▶</button>
             </div>
         </div>
@@ -448,11 +487,13 @@
         let starCount = 0;
         let crownCount = 0;
 
-        /* ✨ 경량화된 글자별 판정 저장소 */
         let charGuideMaps = [];
-        let isLetterCompleted = false;
+        let isPraiseGiven = false;
 
         const board = document.getElementById('game-board');
+        const boardFrameBox = document.getElementById('board-frame-box');
+        const praiseToast = document.getElementById('praise-toast');
+        const btnDone = document.getElementById('btn-done');
         const canvas = document.getElementById('draw-canvas');
         const ctx = canvas.getContext('2d');
         const palette = document.getElementById('palette');
@@ -543,6 +584,13 @@
             }, startDelay);
         }
 
+        /* 칭찬 사운드 (밝은 3화음) */
+        function soundPraise() {
+            playTone(523.25, 'sine', 0.12, 0, 0.25);
+            playTone(659.25, 'sine', 0.12, 80, 0.25);
+            playTone(783.99, 'sine', 0.25, 160, 0.3);
+        }
+
         function soundSuccess() {
             playTone(523.25, 'triangle', 0.15, 0, 0.35);
             playTone(659.25, 'triangle', 0.15, 100, 0.35);
@@ -555,13 +603,12 @@
             playTone(220, 'sine', 0.15, 80, 0.32);
         }
 
-        /* 🔊 TTS 목소리 최적화 */
+        /* 🔊 TTS */
         let bestVoice = null;
         function updateBestVoice() {
             if (!('speechSynthesis' in window)) return;
             const voices = window.speechSynthesis.getVoices();
             const koVoices = voices.filter(v => v.lang.includes('ko') || v.lang.includes('KO'));
-            
             if (koVoices.length > 0) {
                 bestVoice = koVoices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')) ||
                             koVoices.find(v => v.name.includes('Siri') || v.name.includes('Yuna') || v.name.includes('Premium')) ||
@@ -585,19 +632,15 @@
             utter.rate = 0.85;
             utter.pitch = 1.25;
             utter.volume = 1.0;
-
-            if (bestVoice) {
-                utter.voice = bestVoice;
-            }
-
+            if (bestVoice) utter.voice = bestVoice;
             window.speechSynthesis.speak(utter);
         }
 
-        /* 폭죽 파티클 */
+        /* 폭죽 효과 */
         let confettiParticles = [];
-        function fireConfetti() {
+        function fireConfetti(count = 35) {
             const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6', '#ffd32a'];
-            for (let i = 0; i < 35; i++) {
+            for (let i = 0; i < count; i++) {
                 confettiParticles.push({
                     x: window.innerWidth / 2,
                     y: window.innerHeight / 2,
@@ -639,7 +682,7 @@
         }
         requestAnimationFrame(updateAndDrawConfetti);
 
-        /* 🌟 별 도장 & 완성 로직 */
+        /* 🌟 별 도장 & 완성 버튼 클릭 로직 */
         function updateStarBoard() {
             for (let i = 0; i < 5; i++) {
                 const star = document.getElementById(`star-${i}`);
@@ -653,11 +696,8 @@
         }
 
         function finishLetter() {
-            if (isLetterCompleted) return;
-            isLetterCompleted = true;
-
             soundSuccess();
-            fireConfetti();
+            fireConfetti(45);
             starCount++;
 
             if (starCount >= 5) {
@@ -679,7 +719,6 @@
             }, 600);
         }
 
-        /* 칠판 & 드로잉 */
         palette.addEventListener('click', (e) => {
             if (e.target.classList.contains('color-dot')) {
                 document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
@@ -699,7 +738,7 @@
             fxCanvas.height = window.innerHeight;
         }
 
-        /* ✨ 렉 없이 빠른 초경량 가이드 포인트 생성 */
+        /* 글자 가이드 맵 빌드 */
         function buildLetterGuideMap(word, fontSize) {
             charGuideMaps = [];
             const w = board.clientWidth;
@@ -729,8 +768,7 @@
 
                 const imgData = offCtx.getImageData(0, 0, w, h).data;
                 const points = [];
-                // 연산량 폭증 방지 (10px 간격 샘플링)
-                const step = 10;
+                const step = 8; // 8px 단위 샘플링
 
                 for (let y = 0; y < h; y += step) {
                     for (let x = 0; x < w; x += step) {
@@ -750,9 +788,9 @@
 
         /* 획 판정 체크 */
         function checkStrokeCoverage(x, y) {
-            if (charGuideMaps.length === 0 || isLetterCompleted) return;
+            if (charGuideMaps.length === 0) return;
 
-            const radiusSq = (baseLineWidth * 1.5) ** 2;
+            const radiusSq = (baseLineWidth * 1.2) ** 2;
 
             for (let c = 0; c < charGuideMaps.length; c++) {
                 const charMap = charGuideMaps[c];
@@ -769,8 +807,31 @@
             }
         }
 
+        /* 🌟 잘 그렸을 때 칭찬 알림 발동 */
+        function triggerPraiseEffect() {
+            isPraiseGiven = true;
+            soundPraise();
+            fireConfetti(20);
+
+            // 칠판 발광 및 버튼 통통 튀는 효과
+            boardFrameBox.classList.add('praise-glow');
+            btnDone.classList.add('ready-bounce');
+            praiseToast.classList.add('show');
+
+            setTimeout(() => {
+                praiseToast.classList.remove('show');
+            }, 2500);
+        }
+
+        function resetPraiseEffect() {
+            isPraiseGiven = false;
+            boardFrameBox.classList.remove('praise-glow');
+            btnDone.classList.remove('ready-bounce');
+            praiseToast.classList.remove('show');
+        }
+
         function renderWord(word) {
-            isLetterCompleted = false;
+            resetPraiseEffect();
             const oldBoxes = board.querySelectorAll('.char-box');
             oldBoxes.forEach(b => b.remove());
 
@@ -810,7 +871,6 @@
         let lastDrawPos = { x: 0, y: 0 };
 
         function startDraw(e) {
-            if (isLetterCompleted) return;
             isDrawing = true;
             try { canvas.setPointerCapture(e.pointerId); } catch(err){}
             const pos = getPos(e);
@@ -836,7 +896,7 @@
         }
 
         function moveDraw(e) {
-            if (!isDrawing || isLetterCompleted) return;
+            if (!isDrawing) return;
             const pos = getPos(e);
 
             const dist = Math.hypot(pos.x - lastDrawPos.x, pos.y - lastDrawPos.y);
@@ -857,15 +917,15 @@
             ctx.closePath();
             try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
 
-            /* ✨ 글자별 75% 이상 그렸을 때 부드럽게 완성 */
-            if (charGuideMaps.length > 0 && !isLetterCompleted) {
-                const isAllCharsFinished = charGuideMaps.every(charMap => {
+            /* ✨ 글자별 85% 이상 꼼꼼히 완성했을 때 칭찬 알림 (강제 전환 X) */
+            if (!isPraiseGiven && charGuideMaps.length > 0) {
+                const isWellDrawn = charGuideMaps.every(charMap => {
                     if (charMap.points.length === 0) return true;
-                    return (charMap.hitCount / charMap.points.length) >= 0.75;
+                    return (charMap.hitCount / charMap.points.length) >= 0.85; // 꼼꼼한 85% 기준
                 });
 
-                if (isAllCharsFinished) {
-                    finishLetter();
+                if (isWellDrawn) {
+                    triggerPraiseEffect();
                 }
             }
         }
@@ -878,6 +938,7 @@
         function clearCanvas(playSound = true) {
             if (playSound) soundClear();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            resetPraiseEffect();
             
             charGuideMaps.forEach(charMap => {
                 charMap.points.forEach(pt => pt.hit = false);
