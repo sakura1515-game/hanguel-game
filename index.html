@@ -10,7 +10,7 @@
     <title>알록달록 한글 단어 놀이터</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
     
-    <script src="words.js?v=2.0"></script>
+    <script src="words.js?v=3.0"></script>
 
     <style>
         * {
@@ -443,10 +443,15 @@
         let currentWords = categories[currentCategoryKey] || ["가"];
         let currentIndex = 0;
         let isDrawing = false;
-        let currentColor = '#1e90ff'; // 기본 펜 색상: 파란색
+        let currentColor = '#1e90ff'; // 기본 파란색
         let baseLineWidth = 7;
         let starCount = 0;
         let crownCount = 0;
+
+        /* ✨ 자동 완성 판정 변수 */
+        let targetGuidePoints = [];
+        let hitPointsCount = 0;
+        let isLetterCompleted = false;
 
         const board = document.getElementById('game-board');
         const canvas = document.getElementById('draw-canvas');
@@ -459,7 +464,7 @@
         const stampBoardBox = document.getElementById('stamp-board-box');
         const crownBadge = document.getElementById('crown-badge');
 
-        /* 카테고리 탭 초기화 */
+        /* 카테고리 탭 생성 */
         function initCategoryBar() {
             categoryBar.innerHTML = '';
             categoryKeys.forEach(catName => {
@@ -483,7 +488,7 @@
             renderWord(currentWords[currentIndex]);
         }
 
-        /* 🔊 Web Audio 사운드 시스템 (볼륨 증폭) */
+        /* 🔊 볼륨 증폭 사운드 시스템 */
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
         let noteIndex = 0;
@@ -504,8 +509,6 @@
 
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-            // 실로폰 볼륨
             gain.gain.setValueAtTime(0.28, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
 
@@ -523,7 +526,6 @@
                 const gain = audioCtx.createGain();
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
                 gain.gain.setValueAtTime(volume, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
@@ -546,16 +548,14 @@
             playTone(220, 'sine', 0.15, 80, 0.32);
         }
 
-        /* 🔊 고품질 자연스러운 한국어 목소리 탐색 & TTS 시스템 */
+        /* 🔊 TTS 목소리 최적화 */
         let bestVoice = null;
-
         function updateBestVoice() {
             if (!('speechSynthesis' in window)) return;
             const voices = window.speechSynthesis.getVoices();
             const koVoices = voices.filter(v => v.lang.includes('ko') || v.lang.includes('KO'));
             
             if (koVoices.length > 0) {
-                // 1순위: Google/Neural 자연스러운 음성, 2순위: Siri/Premium, 3순위: 기본 한국어
                 bestVoice = koVoices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')) ||
                             koVoices.find(v => v.name.includes('Siri') || v.name.includes('Yuna') || v.name.includes('Premium')) ||
                             koVoices[0];
@@ -575,9 +575,9 @@
             const text = currentWords[currentIndex];
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'ko-KR';
-            utter.rate = 0.85;  // 또렷하게 들리는 속도
-            utter.pitch = 1.25; // 친근하고 밝은 톤
-            utter.volume = 1.0; // 최대 볼륨
+            utter.rate = 0.85;
+            utter.pitch = 1.25;
+            utter.volume = 1.0;
 
             if (bestVoice) {
                 utter.voice = bestVoice;
@@ -632,7 +632,7 @@
         }
         requestAnimationFrame(updateAndDrawConfetti);
 
-        /* 🌟 별 도장 & 완성 로직 (팝업 없이 논스톱 진행) */
+        /* 🌟 별 도장 & 완성 로직 */
         function updateStarBoard() {
             for (let i = 0; i < 5; i++) {
                 const star = document.getElementById(`star-${i}`);
@@ -646,6 +646,9 @@
         }
 
         function finishLetter() {
+            if (isLetterCompleted) return;
+            isLetterCompleted = true;
+
             soundSuccess();
             fireConfetti();
             starCount++;
@@ -666,7 +669,7 @@
 
             setTimeout(() => {
                 nextWord();
-            }, 350);
+            }, 600);
         }
 
         /* 칠판 & 드로잉 */
@@ -689,7 +692,68 @@
             fxCanvas.height = window.innerHeight;
         }
 
+        /* ✨ 글자 가이드 픽셀 맵 빌드 (자동 완성 판정용) */
+        function buildLetterGuideMap(word, fontSize) {
+            targetGuidePoints = [];
+            hitPointsCount = 0;
+
+            const offCanvas = document.createElement('canvas');
+            const w = board.clientWidth;
+            const h = board.clientHeight;
+            offCanvas.width = w;
+            offCanvas.height = h;
+            const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+
+            offCtx.fillStyle = '#ffffff';
+            offCtx.fillRect(0, 0, w, h);
+
+            offCtx.fillStyle = '#000000';
+            offCtx.font = `800 ${fontSize}px 'Nanum Gothic'`;
+            offCtx.textAlign = 'center';
+            offCtx.textBaseline = 'middle';
+
+            const charCount = word.length;
+            const colWidth = w / charCount;
+
+            for (let i = 0; i < charCount; i++) {
+                const cx = colWidth * i + colWidth / 2;
+                const cy = h / 2;
+                offCtx.fillText(word[i], cx, cy);
+            }
+
+            // 6px 간격으로 샘플링하여 글자 획 좌표 수집
+            const imgData = offCtx.getImageData(0, 0, w, h).data;
+            const step = 6;
+            for (let y = 0; y < h; y += step) {
+                for (let x = 0; x < w; x += step) {
+                    const idx = (y * w + x) * 4;
+                    // 검은색 획 영역 판정
+                    if (imgData[idx] < 120) {
+                        targetGuidePoints.push({ x, y, hit: false });
+                    }
+                }
+            }
+        }
+
+        /* 획 밟음 체크 */
+        function checkStrokeCoverage(x, y) {
+            if (targetGuidePoints.length === 0 || isLetterCompleted) return;
+
+            const radiusSq = (baseLineWidth * 1.5) ** 2;
+            for (let i = 0; i < targetGuidePoints.length; i++) {
+                const pt = targetGuidePoints[i];
+                if (!pt.hit) {
+                    const distSq = (pt.x - x) ** 2 + (pt.y - y) ** 2;
+                    if (distSq <= radiusSq) {
+                        pt.hit = true;
+                        hitPointsCount++;
+                    }
+                }
+            }
+        }
+
         function renderWord(word) {
+            isLetterCompleted = false;
             const oldBoxes = board.querySelectorAll('.char-box');
             oldBoxes.forEach(b => b.remove());
 
@@ -714,6 +778,7 @@
 
             pageBadge.textContent = `${currentIndex + 1} / ${currentWords.length}`;
             clearCanvas(false);
+            buildLetterGuideMap(word, fontSize);
             speakCurrentWord();
         }
 
@@ -728,6 +793,7 @@
         let lastDrawPos = { x: 0, y: 0 };
 
         function startDraw(e) {
+            if (isLetterCompleted) return;
             isDrawing = true;
             canvas.setPointerCapture(e.pointerId);
             const pos = getPos(e);
@@ -748,10 +814,12 @@
             ctx.lineJoin = 'round';
             ctx.lineTo(pos.x, pos.y);
             ctx.stroke();
+
+            checkStrokeCoverage(pos.x, pos.y);
         }
 
         function moveDraw(e) {
-            if (!isDrawing) return;
+            if (!isDrawing || isLetterCompleted) return;
             const pos = getPos(e);
 
             const dist = Math.hypot(pos.x - lastDrawPos.x, pos.y - lastDrawPos.y);
@@ -762,6 +830,8 @@
 
             ctx.lineTo(pos.x, pos.y);
             ctx.stroke();
+
+            checkStrokeCoverage(pos.x, pos.y);
         }
 
         function endDraw(e) {
@@ -771,6 +841,14 @@
             try {
                 canvas.releasePointerCapture(e.pointerId);
             } catch (err) {}
+
+            /* ✨ 글자를 70% 이상 채웠을 때 자동으로 다음 단어로 이동 */
+            if (targetGuidePoints.length > 0 && !isLetterCompleted) {
+                const ratio = hitPointsCount / targetGuidePoints.length;
+                if (ratio >= 0.70) {
+                    finishLetter();
+                }
+            }
         }
 
         canvas.addEventListener('pointerdown', startDraw);
@@ -781,6 +859,12 @@
         function clearCanvas(playSound = true) {
             if (playSound) soundClear();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 판정 데이터 초기화
+            if (targetGuidePoints.length > 0) {
+                targetGuidePoints.forEach(pt => pt.hit = false);
+                hitPointsCount = 0;
+            }
         }
 
         function nextWord() {
