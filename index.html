@@ -10,7 +10,7 @@
     <title>알록달록 한글 단어 놀이터</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
     
-    <script src="words.js?v=3.0"></script>
+    <script src="words.js?v=4.0"></script>
 
     <style>
         * {
@@ -448,9 +448,8 @@
         let starCount = 0;
         let crownCount = 0;
 
-        /* ✨ 자동 완성 판정 변수 */
-        let targetGuidePoints = [];
-        let hitPointsCount = 0;
+        /* ✨ 글자별 독립 판정 데이터 */
+        let charGuideMaps = []; // 각 글자별 { points: [], hitCount: 0 }
         let isLetterCompleted = false;
 
         const board = document.getElementById('game-board');
@@ -464,7 +463,6 @@
         const stampBoardBox = document.getElementById('stamp-board-box');
         const crownBadge = document.getElementById('crown-badge');
 
-        /* 카테고리 탭 생성 */
         function initCategoryBar() {
             categoryBar.innerHTML = '';
             categoryKeys.forEach(catName => {
@@ -488,7 +486,7 @@
             renderWord(currentWords[currentIndex]);
         }
 
-        /* 🔊 볼륨 증폭 사운드 시스템 */
+        /* 🔊 Web Audio 사운드 시스템 */
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
         let noteIndex = 0;
@@ -526,6 +524,7 @@
                 const gain = audioCtx.createGain();
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
                 gain.gain.setValueAtTime(volume, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
@@ -692,10 +691,9 @@
             fxCanvas.height = window.innerHeight;
         }
 
-        /* ✨ 글자 가이드 픽셀 맵 빌드 (자동 완성 판정용) */
+        /* ✨ 정밀 글자별(Char-by-Char) 가이드 픽셀 맵 빌드 */
         function buildLetterGuideMap(word, fontSize) {
-            targetGuidePoints = [];
-            hitPointsCount = 0;
+            charGuideMaps = [];
 
             const offCanvas = document.createElement('canvas');
             const w = board.clientWidth;
@@ -704,49 +702,59 @@
             offCanvas.height = h;
             const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
 
-            offCtx.fillStyle = '#ffffff';
-            offCtx.fillRect(0, 0, w, h);
-
-            offCtx.fillStyle = '#000000';
-            offCtx.font = `800 ${fontSize}px 'Nanum Gothic'`;
-            offCtx.textAlign = 'center';
-            offCtx.textBaseline = 'middle';
-
             const charCount = word.length;
             const colWidth = w / charCount;
 
             for (let i = 0; i < charCount; i++) {
+                offCtx.fillStyle = '#ffffff';
+                offCtx.fillRect(0, 0, w, h);
+
+                offCtx.fillStyle = '#000000';
+                offCtx.font = `800 ${fontSize}px 'Nanum Gothic'`;
+                offCtx.textAlign = 'center';
+                offCtx.textBaseline = 'middle';
+
                 const cx = colWidth * i + colWidth / 2;
                 const cy = h / 2;
                 offCtx.fillText(word[i], cx, cy);
-            }
 
-            // 6px 간격으로 샘플링하여 글자 획 좌표 수집
-            const imgData = offCtx.getImageData(0, 0, w, h).data;
-            const step = 6;
-            for (let y = 0; y < h; y += step) {
-                for (let x = 0; x < w; x += step) {
-                    const idx = (y * w + x) * 4;
-                    // 검은색 획 영역 판정
-                    if (imgData[idx] < 120) {
-                        targetGuidePoints.push({ x, y, hit: false });
+                const imgData = offCtx.getImageData(0, 0, w, h).data;
+                const points = [];
+                const step = 5; // 5px 단위로 정밀 샘플링
+
+                for (let y = 0; y < h; y += step) {
+                    for (let x = 0; x < w; x += step) {
+                        const idx = (y * w + x) * 4;
+                        if (imgData[idx] < 120) {
+                            points.push({ x, y, hit: false });
+                        }
                     }
                 }
+
+                charGuideMaps.push({
+                    points: points,
+                    hitCount: 0
+                });
             }
         }
 
-        /* 획 밟음 체크 */
+        /* 획 밟음 체크 (정밀 반경 적용) */
         function checkStrokeCoverage(x, y) {
-            if (targetGuidePoints.length === 0 || isLetterCompleted) return;
+            if (charGuideMaps.length === 0 || isLetterCompleted) return;
 
-            const radiusSq = (baseLineWidth * 1.5) ** 2;
-            for (let i = 0; i < targetGuidePoints.length; i++) {
-                const pt = targetGuidePoints[i];
-                if (!pt.hit) {
-                    const distSq = (pt.x - x) ** 2 + (pt.y - y) ** 2;
-                    if (distSq <= radiusSq) {
-                        pt.hit = true;
-                        hitPointsCount++;
+            // 판정 반경을 실제 펜 굵기에 알맞게 축소 (허수 판정 방지)
+            const radiusSq = (baseLineWidth * 1.1) ** 2;
+
+            for (let c = 0; c < charGuideMaps.length; c++) {
+                const charMap = charGuideMaps[c];
+                for (let i = 0; i < charMap.points.length; i++) {
+                    const pt = charMap.points[i];
+                    if (!pt.hit) {
+                        const distSq = (pt.x - x) ** 2 + (pt.y - y) ** 2;
+                        if (distSq <= radiusSq) {
+                            pt.hit = true;
+                            charMap.hitCount++;
+                        }
                     }
                 }
             }
@@ -842,10 +850,14 @@
                 canvas.releasePointerCapture(e.pointerId);
             } catch (err) {}
 
-            /* ✨ 글자를 70% 이상 채웠을 때 자동으로 다음 단어로 이동 */
-            if (targetGuidePoints.length > 0 && !isLetterCompleted) {
-                const ratio = hitPointsCount / targetGuidePoints.length;
-                if (ratio >= 0.70) {
+            /* ✨ 글자별 80% 이상 완성되었는지 검사 (모든 글자를 다 써야 완성) */
+            if (charGuideMaps.length > 0 && !isLetterCompleted) {
+                const isAllCharsFinished = charGuideMaps.every(charMap => {
+                    if (charMap.points.length === 0) return true;
+                    return (charMap.hitCount / charMap.points.length) >= 0.80; // 각 글자당 80% 기준
+                });
+
+                if (isAllCharsFinished) {
                     finishLetter();
                 }
             }
@@ -861,10 +873,10 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // 판정 데이터 초기화
-            if (targetGuidePoints.length > 0) {
-                targetGuidePoints.forEach(pt => pt.hit = false);
-                hitPointsCount = 0;
-            }
+            charGuideMaps.forEach(charMap => {
+                charMap.points.forEach(pt => pt.hit = false);
+                charMap.hitCount = 0;
+            });
         }
 
         function nextWord() {
@@ -873,21 +885,4 @@
         }
 
         function prevWord() {
-            currentIndex = (currentIndex - 1 + currentWords.length) % currentWords.length;
-            renderWord(currentWords[currentIndex]);
-        }
-
-        function updateLayout() {
-            fitCanvas();
-            renderWord(currentWords[currentIndex]);
-        }
-
-        initCategoryBar();
-        window.addEventListener('resize', updateLayout);
-        window.addEventListener('orientationchange', () => {
-            setTimeout(updateLayout, 150);
-        });
-        document.fonts.ready.then(updateLayout);
-    </script>
-</body>
-</html>
+            currentIndex
