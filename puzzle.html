@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>자석 글자 조립하기</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
-    <script src="words.js?v=13.0"></script>
+    <script src="words.js?v=14.0"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -318,7 +318,6 @@
 
         #fx-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
 
-        /* 📱 가로 모드 (Landscape) 2단 정렬 */
         @media (orientation: landscape) and (max-height: 520px) {
             body { padding: 4px 12px; justify-content: space-evenly; }
             .category-scroll { max-width: 95vw; padding-bottom: 2px; }
@@ -458,31 +457,16 @@
             playTone(180, 'triangle', 0.15, 60, 0.2);
         }
 
-        let bestVoice = null;
-        function updateBestVoice() {
-            if (!('speechSynthesis' in window)) return;
-            const voices = window.speechSynthesis.getVoices();
-            const koVoices = voices.filter(v => v.lang.includes('ko') || v.lang.includes('KO'));
-            if (koVoices.length > 0) {
-                bestVoice = koVoices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')) ||
-                            koVoices.find(v => v.name.includes('Siri') || v.name.includes('Yuna')) || koVoices[0];
-            }
-        }
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = updateBestVoice;
-            updateBestVoice();
-        }
-
+        /* 🔊 깨끗하고 또렷한 기본 TTS 발음 */
         function speakText(text) {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
-            if (!bestVoice) updateBestVoice();
 
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'ko-KR';
-            utter.rate = 0.85;
-            utter.pitch = 1.25;
-            if (bestVoice) utter.voice = bestVoice;
+            utter.rate = 1.0;   // 표준 정속
+            utter.pitch = 1.0;  // 표준 기본 톤
+            utter.volume = 1.0; // 최대 음량
             window.speechSynthesis.speak(utter);
         }
 
@@ -520,9 +504,7 @@
             document.getElementById('crown-badge').textContent = crownCount > 0 ? `👑×${crownCount}` : '';
         }
 
-        /* 🌟 전체 완성 처리 (충분한 텀을 두고 전체 단어 읽기) */
         function handleSuccess() {
-            // 마지막 글자 TTS가 끝날 때까지 0.75초 기다린 뒤 전체 단어 읽기 & 팡파레 시작
             setTimeout(() => {
                 playTone(523.25, 'triangle', 0.15, 0);
                 playTone(659.25, 'triangle', 0.15, 100);
@@ -530,7 +512,6 @@
                 playTone(1046.50, 'triangle', 0.35, 300);
                 fireConfetti();
 
-                // 단어 전체 또렷하게 읽기
                 speakText(currentWords[currentIndex]);
 
                 if (++starCount >= 5) {
@@ -547,7 +528,6 @@
                 }
             }, 750);
 
-            // 전체 음성 및 축하가 끝난 후 다음 단어로 부드럽게 이동
             setTimeout(nextWord, 2100);
         }
 
@@ -722,8 +702,6 @@
                 const charGroup = document.querySelector(`.char-slot-group[data-char-index="${currentCharIndex}"]`);
                 if (charGroup) charGroup.classList.add('completed');
                 soundCharDone();
-
-                // 음절 완성 시 해당 글자 발음
                 speakText(currentChar);
             }
 
