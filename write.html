@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>칠판에 글자 쓰기</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
-    <script src="words.js?v=10.0"></script>
+    <script src="words.js?v=18.0"></script>
 
     <style>
         * {
@@ -261,10 +261,15 @@
             align-items: center;
             justify-content: center;
             border-right: 1.5px dashed #e2e8f0;
+            transition: background-color 0.3s ease;
         }
 
         .char-box:last-child {
             border-right: none;
+        }
+
+        .char-box.char-done {
+            background-color: #f4fce3;
         }
 
         .char-box::before {
@@ -295,6 +300,11 @@
             z-index: 1;
             user-select: none;
             letter-spacing: -2px;
+            transition: color 0.3s ease;
+        }
+
+        .char-box.char-done .guide-char {
+            color: #b2f2bb;
         }
 
         #draw-canvas {
@@ -491,7 +501,7 @@
                     <div class="color-dot" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
                     <div class="color-dot" style="background-color: #2f3542;" data-color="#2f3542"></div>
                 </div>
-                <div class="btn-speaker" onclick="speakCurrentWord()" title="소리 듣기">🔊</div>
+                <div class="btn-speaker" onclick="speakText(currentWords[currentIndex])" title="소리 듣기">🔊</div>
             </div>
 
             <!-- 컨트롤 버튼 -->
@@ -565,7 +575,7 @@
             renderWord(currentWords[currentIndex]);
         }
 
-        /* 🔊 사운드 시스템 (증폭 볼륨) */
+        /* 🔊 Web Audio 사운드 시스템 */
         let audioCtx = null;
         function getAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -618,10 +628,9 @@
             }, startDelay);
         }
 
-        function soundPraise() {
-            playTone(523.25, 'sine', 0.12, 0, 0.28);
-            playTone(659.25, 'sine', 0.12, 80, 0.28);
-            playTone(783.99, 'sine', 0.25, 160, 0.35);
+        function soundCharDone() {
+            playTone(523.25, 'sine', 0.12, 0, 0.3);
+            playTone(783.99, 'sine', 0.18, 80, 0.35);
         }
 
         function soundSuccess() {
@@ -636,36 +645,16 @@
             playTone(220, 'sine', 0.15, 80, 0.32);
         }
 
-        /* 🔊 TTS 목소리 최적화 */
-        let bestVoice = null;
-        function updateBestVoice() {
-            if (!('speechSynthesis' in window)) return;
-            const voices = window.speechSynthesis.getVoices();
-            const koVoices = voices.filter(v => v.lang.includes('ko') || v.lang.includes('KO'));
-            if (koVoices.length > 0) {
-                bestVoice = koVoices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')) ||
-                            koVoices.find(v => v.name.includes('Siri') || v.name.includes('Yuna') || v.name.includes('Premium')) ||
-                            koVoices[0];
-            }
-        }
-
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = updateBestVoice;
-            updateBestVoice();
-        }
-
-        function speakCurrentWord() {
+        /* 🔊 깨끗하고 또렷한 표준 TTS 발음 */
+        function speakText(text) {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
-            if (!bestVoice) updateBestVoice();
 
-            const text = currentWords[currentIndex];
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'ko-KR';
-            utter.rate = 0.85;
-            utter.pitch = 1.25;
+            utter.rate = 1.0;
+            utter.pitch = 1.0;
             utter.volume = 1.0;
-            if (bestVoice) utter.voice = bestVoice;
             window.speechSynthesis.speak(utter);
         }
 
@@ -731,6 +720,7 @@
         function finishLetter() {
             soundSuccess();
             fireConfetti(45);
+            speakText(currentWords[currentIndex]);
             starCount++;
 
             if (starCount >= 5) {
@@ -812,15 +802,19 @@
                 }
 
                 charGuideMaps.push({
+                    char: word[i],
+                    charIndex: i,
                     points: points,
-                    hitCount: 0
+                    hitCount: 0,
+                    isDone: false
                 });
             }
         }
 
+        /* 🎯 적정 수준의 인식 반경 (1.35배) */
         function checkStrokeCoverage(x, y) {
             if (charGuideMaps.length === 0) return;
-            const radiusSq = (baseLineWidth * 1.2) ** 2;
+            const radiusSq = (baseLineWidth * 1.35) ** 2;
 
             for (let c = 0; c < charGuideMaps.length; c++) {
                 const charMap = charGuideMaps[c];
@@ -839,16 +833,19 @@
 
         function triggerPraiseEffect() {
             isPraiseGiven = true;
-            soundPraise();
-            fireConfetti(20);
-
             boardFrameBox.classList.add('praise-glow');
             btnDone.classList.add('ready-bounce');
             praiseToast.classList.add('show');
 
             setTimeout(() => {
+                soundSuccess();
+                fireConfetti(35);
+                speakText(currentWords[currentIndex]);
+            }, 750);
+
+            setTimeout(() => {
                 praiseToast.classList.remove('show');
-            }, 2500);
+            }, 3000);
         }
 
         function resetPraiseEffect() {
@@ -872,6 +869,7 @@
             for (let i = 0; i < charCount; i++) {
                 const box = document.createElement('div');
                 box.className = 'char-box';
+                box.dataset.charIndex = i;
 
                 const charSpan = document.createElement('span');
                 charSpan.className = 'guide-char';
@@ -885,7 +883,7 @@
             pageBadge.textContent = `${currentIndex + 1} / ${currentWords.length}`;
             clearCanvas(false);
             buildLetterGuideMap(word, fontSize);
-            speakCurrentWord();
+            speakText(word);
         }
 
         let lastDrawPos = { x: 0, y: 0 };
@@ -939,13 +937,31 @@
             ctx.closePath();
             try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
 
-            if (!isPraiseGiven && charGuideMaps.length > 0) {
-                const isWellDrawn = charGuideMaps.every(charMap => {
+            if (charGuideMaps.length === 0) return;
+
+            /* 🎯 80% 달성 시 해당 글자 완성 판정 */
+            charGuideMaps.forEach(charMap => {
+                if (!charMap.isDone && charMap.points.length > 0) {
+                    const ratio = charMap.hitCount / charMap.points.length;
+                    if (ratio >= 0.80) {
+                        charMap.isDone = true;
+                        
+                        const box = document.querySelector(`.char-box[data-char-index="${charMap.charIndex}"]`);
+                        if (box) box.classList.add('char-done');
+
+                        soundCharDone();
+                        speakText(charMap.char);
+                    }
+                }
+            });
+
+            if (!isPraiseGiven) {
+                const isAllDrawn = charGuideMaps.every(charMap => {
                     if (charMap.points.length === 0) return true;
-                    return (charMap.hitCount / charMap.points.length) >= 0.85;
+                    return charMap.isDone;
                 });
 
-                if (isWellDrawn) {
+                if (isAllDrawn) {
                     triggerPraiseEffect();
                 }
             }
@@ -961,9 +977,12 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             resetPraiseEffect();
             
+            document.querySelectorAll('.char-box').forEach(box => box.classList.remove('char-done'));
+
             charGuideMaps.forEach(charMap => {
                 charMap.points.forEach(pt => pt.hit = false);
                 charMap.hitCount = 0;
+                charMap.isDone = false;
             });
         }
 
