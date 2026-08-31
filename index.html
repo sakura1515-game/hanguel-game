@@ -2,10 +2,11 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>알록달록 한글 단어 놀이터</title>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@800&family=Gaegu:wght@700&display=swap" rel="stylesheet">
     
+    <!-- 단어 카테고리 파일 불러오기 -->
     <script src="words.js"></script>
 
     <style>
@@ -26,35 +27,37 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            min-height: 100dvh;
             touch-action: none;
             overflow: hidden;
         }
 
-        /* 1. 카테고리 선택 탭바 (가로 스크롤 가능) */
+        /* 1. 카테고리 선택 바 */
         .category-scroll-container {
             width: 100%;
-            max-width: 560px;
+            max-width: 580px;
             overflow-x: auto;
             white-space: nowrap;
             display: flex;
             gap: 6px;
-            padding: 4px 2px 8px 2px;
-            scrollbar-width: none; /* 파이어폭스 스크롤 숨김 */
+            padding: 2px 4px 6px 4px;
+            scrollbar-width: none;
+            flex-shrink: 0;
         }
         .category-scroll-container::-webkit-scrollbar {
-            display: none; /* 크롬/사파리 스크롤 숨김 */
+            display: none;
         }
 
         .category-btn {
             background-color: #ffffff;
             border: 2px solid #ffd166;
-            border-bottom: 4px solid #e0ab34;
+            border-bottom: 3px solid #e0ab34;
             color: #634200;
             font-family: 'Gaegu', cursive;
-            font-size: 17px;
+            font-size: 16px;
             font-weight: bold;
-            padding: 5px 14px;
-            border-radius: 20px;
+            padding: 4px 12px;
+            border-radius: 18px;
             cursor: pointer;
             transition: all 0.15s ease;
             flex-shrink: 0;
@@ -64,43 +67,53 @@
             background-color: #ff7675;
             color: #ffffff;
             border-color: #d63031;
-            border-bottom: 4px solid #c0392b;
-            transform: scale(1.05);
+            border-bottom: 3px solid #c0392b;
+            transform: scale(1.04);
         }
 
         .category-btn:active {
             transform: translateY(2px);
-            border-bottom-width: 2px;
+            border-bottom-width: 1px;
         }
 
-        /* 2. 상단 별 도장판 & 진행 현황 */
+        /* 메인 콘텐츠 래퍼 */
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 580px;
+        }
+
+        /* 2. 상단 상태창 */
         .status-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
             width: min(92vw, 560px);
             margin-bottom: 6px;
+            flex-shrink: 0;
         }
 
         .stamp-board {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             background: #fff;
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 20px;
             border: 2px solid #ffd166;
             box-shadow: 0 3px 6px rgba(0,0,0,0.04);
         }
 
         .stamp-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             color: #d97706;
         }
 
         .stamp-star {
-            font-size: 18px;
+            font-size: 17px;
             color: #e5e7eb;
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s;
         }
@@ -114,26 +127,27 @@
         .page-badge {
             background: #ffffff;
             border: 2px solid #dcdde1;
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 20px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             color: #57606f;
         }
 
-        /* 3. 팔레트 및 소리 버튼 */
+        /* 3. 팔레트 & 스피커 바 */
         .top-bar {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 8px;
+            flex-shrink: 0;
         }
 
         .palette-container {
             display: flex;
             gap: 6px;
             background: #ffffff;
-            padding: 4px 10px;
+            padding: 4px 8px;
             border-radius: 40px;
             box-shadow: 0 3px 8px rgba(0,0,0,0.05);
             border: 2px solid #f0e6d6;
@@ -150,22 +164,23 @@
         }
 
         .color-dot.active {
-            transform: scale(1.2);
+            transform: scale(1.18);
             border-color: #4a3427;
         }
 
         .btn-speaker {
             background: #fff;
             border: 2px solid #ffd166;
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            font-size: 20px;
+            font-size: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+            flex-shrink: 0;
         }
 
         .btn-speaker:active {
@@ -175,17 +190,18 @@
         /* 4. 칠판 프레임 */
         .board-frame {
             position: relative;
-            padding: 8px;
-            border-radius: 24px;
+            padding: 6px;
+            border-radius: 22px;
             background: linear-gradient(135deg, #ff7675, #fab1a0, #ffeaa7, #55efc4, #81ecec, #74b9ff, #a29bfe);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            flex-shrink: 0;
         }
 
         #game-board {
             width: min(92vw, 560px);
-            height: min(50vw, 280px);
+            height: min(48vw, 260px);
             background-color: #ffffff;
-            border-radius: 18px;
+            border-radius: 16px;
             position: relative;
             overflow: hidden;
             display: flex;
@@ -247,19 +263,20 @@
 
         /* 5. 하단 버튼 */
         .btn-group {
-            margin-top: 12px;
+            margin-top: 10px;
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            flex-shrink: 0;
         }
 
         button.action-btn {
             border: 2px solid #333;
             border-bottom: 4px solid #222;
-            padding: 7px 18px;
+            padding: 6px 16px;
             font-family: 'Gaegu', cursive;
-            font-size: 19px;
+            font-size: 18px;
             font-weight: bold;
-            border-radius: 16px;
+            border-radius: 14px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -287,7 +304,7 @@
             z-index: 999;
         }
 
-        /* 보상 팝업 */
+        /* 모달 팝업 */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -308,8 +325,8 @@
 
         .modal-box {
             background: white;
-            padding: 24px 32px;
-            border-radius: 28px;
+            padding: 20px 28px;
+            border-radius: 24px;
             text-align: center;
             box-shadow: 0 16px 32px rgba(0,0,0,0.2);
             border: 4px solid #ffd166;
@@ -322,16 +339,16 @@
         }
 
         .modal-icon {
-            font-size: 54px;
-            margin-bottom: 6px;
+            font-size: 48px;
+            margin-bottom: 4px;
             animation: bounce 0.6s infinite alternate ease-in-out;
         }
 
         .modal-text {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #333;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             white-space: pre-line;
         }
 
@@ -339,51 +356,127 @@
             from { transform: translateY(0); }
             to { transform: translateY(-8px); }
         }
+
+        /* 📱 가로 모드 (Landscape) 전용 최적화 레이아웃 */
+        @media (orientation: landscape) and (max-height: 520px) {
+            body {
+                padding: 4px 12px;
+                justify-content: space-evenly;
+            }
+
+            .category-scroll-container {
+                max-width: 95vw;
+                padding-bottom: 2px;
+            }
+
+            .category-btn {
+                font-size: 14px;
+                padding: 3px 10px;
+                border-radius: 14px;
+            }
+
+            /* 가로 분할 2단 레이아웃 (왼쪽: 칠판 / 오른쪽: 컨트롤) */
+            .main-layout {
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                max-width: 96vw;
+                gap: 14px;
+            }
+
+            .controls-column {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .status-bar {
+                width: 100%;
+                margin-bottom: 0;
+                gap: 8px;
+            }
+
+            .top-bar {
+                margin-bottom: 0;
+            }
+
+            #game-board {
+                /* 가로 모드 높이에 맞춰 칠판 크기 자동 최적화 */
+                width: min(58vw, 480px);
+                height: min(65vh, 260px);
+            }
+
+            .btn-group {
+                margin-top: 2px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                width: 100%;
+            }
+
+            button.action-btn {
+                padding: 6px 10px;
+                font-size: 16px;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
 
+    <!-- 카테고리 탭 목록 -->
     <div class="category-scroll-container" id="category-bar"></div>
 
-    <div class="status-bar">
-        <div class="stamp-board">
-            <span class="stamp-title">⭐ 도장</span>
-            <span class="stamp-star" id="star-0">★</span>
-            <span class="stamp-star" id="star-1">★</span>
-            <span class="stamp-star" id="star-2">★</span>
-            <span class="stamp-star" id="star-3">★</span>
-            <span class="stamp-star" id="star-4">★</span>
+    <div class="main-layout">
+        <!-- 무지개 칠판 보드 (왼쪽/중앙) -->
+        <div class="board-frame">
+            <div id="game-board">
+                <canvas id="draw-canvas"></canvas>
+            </div>
         </div>
-        <div class="page-badge" id="page-badge">1 / 1</div>
-    </div>
 
-    <div class="top-bar">
-        <div class="palette-container" id="palette">
-            <div class="color-dot active" style="background-color: #ff4757;" data-color="#ff4757"></div>
-            <div class="color-dot" style="background-color: #ffa502;" data-color="#ffa502"></div>
-            <div class="color-dot" style="background-color: #2ed573;" data-color="#2ed573"></div>
-            <div class="color-dot" style="background-color: #1e90ff;" data-color="#1e90ff"></div>
-            <div class="color-dot" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
-            <div class="color-dot" style="background-color: #2f3542;" data-color="#2f3542"></div>
+        <!-- 컨트롤 영역 (가로 모드 시 오른쪽 배치) -->
+        <div class="controls-column">
+            <!-- 상단 도장판 & 페이지 현황 -->
+            <div class="status-bar">
+                <div class="stamp-board">
+                    <span class="stamp-title">⭐ 도장</span>
+                    <span class="stamp-star" id="star-0">★</span>
+                    <span class="stamp-star" id="star-1">★</span>
+                    <span class="stamp-star" id="star-2">★</span>
+                    <span class="stamp-star" id="star-3">★</span>
+                    <span class="stamp-star" id="star-4">★</span>
+                </div>
+                <div class="page-badge" id="page-badge">1 / 1</div>
+            </div>
+
+            <!-- 팔레트 & 발음 듣기 -->
+            <div class="top-bar">
+                <div class="palette-container" id="palette">
+                    <div class="color-dot active" style="background-color: #ff4757;" data-color="#ff4757"></div>
+                    <div class="color-dot" style="background-color: #ffa502;" data-color="#ffa502"></div>
+                    <div class="color-dot" style="background-color: #2ed573;" data-color="#2ed573"></div>
+                    <div class="color-dot" style="background-color: #1e90ff;" data-color="#1e90ff"></div>
+                    <div class="color-dot" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
+                    <div class="color-dot" style="background-color: #2f3542;" data-color="#2f3542"></div>
+                </div>
+                <div class="btn-speaker" onclick="speakCurrentWord()" title="소리 듣기">🔊</div>
+            </div>
+
+            <!-- 컨트롤 버튼 -->
+            <div class="btn-group">
+                <button class="action-btn btn-prev" onclick="prevWord()">◀ 이전</button>
+                <button class="action-btn btn-clear" onclick="clearCanvas()">🧼 지우기</button>
+                <button class="action-btn btn-done" onclick="finishLetter()">✨ 완성!</button>
+                <button class="action-btn btn-next" onclick="nextWord()">다음 ▶</button>
+            </div>
         </div>
-        <div class="btn-speaker" onclick="speakCurrentWord()" title="소리 듣기">🔊</div>
-    </div>
-
-    <div class="board-frame">
-        <div id="game-board">
-            <canvas id="draw-canvas"></canvas>
-        </div>
-    </div>
-
-    <div class="btn-group">
-        <button class="action-btn btn-prev" onclick="prevWord()">◀ 이전</button>
-        <button class="action-btn btn-clear" onclick="clearCanvas()">🧼 지우기</button>
-        <button class="action-btn btn-done" onclick="finishLetter()">✨ 완성!</button>
-        <button class="action-btn btn-next" onclick="nextWord()">다음 ▶</button>
     </div>
 
     <canvas id="fx-canvas"></canvas>
 
+    <!-- 보상 팝업 -->
     <div class="modal-overlay" id="reward-modal" onclick="closeRewardModal()">
         <div class="modal-box">
             <div class="modal-icon" id="modal-icon">👑</div>
@@ -393,7 +486,6 @@
     </div>
 
     <script>
-        // 기본 데이터 백업
         const defaultCategories = {
             "가나다": ["가", "나", "다", "라", "마", "바", "사"],
             "예쁜 이름": ["연아", "시우", "지우"],
@@ -420,7 +512,7 @@
         const categoryBar = document.getElementById('category-bar');
         const pageBadge = document.getElementById('page-badge');
 
-        /* ---------------- 카테고리 탭 생성 및 전환 ---------------- */
+        /* 카테고리 탭 초기화 */
         function initCategoryBar() {
             categoryBar.innerHTML = '';
             categoryKeys.forEach(catName => {
@@ -444,7 +536,7 @@
             renderWord(currentWords[currentIndex]);
         }
 
-        /* ---------------- Web Audio 사운드 시스템 ---------------- */
+        /* Web Audio 사운드 시스템 */
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
         let noteIndex = 0;
@@ -503,7 +595,7 @@
             playTone(220, 'sine', 0.15, 80);
         }
 
-        /* ---------------- 음성 읽어주기 (TTS) ---------------- */
+        /* TTS */
         function speakCurrentWord() {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
@@ -515,7 +607,7 @@
             window.speechSynthesis.speak(utter);
         }
 
-        /* ---------------- 폭죽 효과 ---------------- */
+        /* 폭죽 */
         let confettiParticles = [];
         function fireConfetti() {
             const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6', '#ffd32a'];
@@ -561,7 +653,7 @@
         }
         requestAnimationFrame(updateAndDrawConfetti);
 
-        /* ---------------- 별 도장 & 보상 ---------------- */
+        /* 도장 & 모달 */
         function updateStarBoard() {
             for (let i = 0; i < 5; i++) {
                 const star = document.getElementById(`star-${i}`);
@@ -603,7 +695,7 @@
             nextWord();
         }
 
-        /* ---------------- 칠판 & 드로잉 ---------------- */
+        /* 칠판 렌더링 */
         palette.addEventListener('click', (e) => {
             if (e.target.classList.contains('color-dot')) {
                 document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
@@ -732,9 +824,11 @@
             renderWord(currentWords[currentIndex]);
         }
 
-        // 초기 시작
         initCategoryBar();
         window.addEventListener('resize', updateLayout);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateLayout, 150);
+        });
         document.fonts.ready.then(updateLayout);
     </script>
 </body>
